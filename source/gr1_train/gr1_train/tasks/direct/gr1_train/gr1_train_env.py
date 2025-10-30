@@ -218,17 +218,14 @@ class Gr1TrainEnv(DirectRLEnv):
         rew_stopping_bonus = self.cfg.reward_scale_stopping_bonus * (left_dist < 0.1).to(dtype=torch.float32) * (left_vel_norm < 0.1).to(dtype=torch.float32)
 
         # right_dist = torch.linalg.norm(right_hand_pos - obj_pos, dim=-1) # distance between hand and bowl
-        rew_left_dist = self.cfg.reward_scale_distance_left * left_dist * (left_dist < 0.1).to(dtype=torch.float32)
+        rew_left_dist = self.cfg.reward_scale_distance_left * left_dist * (left_dist > 0.1).to(dtype=torch.float32)
         rew_left_bonus = self.cfg.reward_scale_left_bonus * (left_dist < 0.1).to(dtype=torch.float32)
 
         rew_left_vel = self.cfg.reward_scale_left_vel * left_vel_norm
 
         rew_falling_penalty = self.cfg.reward_scale_falling_penalty * (obj_z < 0.8).to(dtype=torch.float32)
-        
         # rew_obj_vel = self.cfg.reward_scale_obj_vel * torch.linalg.norm(obj_velocity)
-
         # rew_dist_right = self.cfg.reward_scale_distance_right * right_dist
-
         # rew_lift = self.cfg.reward_scale_lift * (obj_z > 1.1).to(dtype=torch.float32) * (obj_z < 1.5).to(dtype=torch.float32)
         # print(f"Episode length buff {self.episode_length_buf}")
         rew_time = self.cfg.reward_scale_time * self.episode_length_buf
@@ -270,7 +267,7 @@ class Gr1TrainEnv(DirectRLEnv):
         # euclidean distance to object
         left_dist = torch.linalg.norm(left_hand_pos - obj_pos, dim=-1) # distance between hand and bowl
         left_vel_norm = torch.linalg.norm(left_vel, dim=-1)
-        close_hand = (left_dist < 0.2).to(dtype=torch.float32) * (left_vel_norm < 0.2).to(dtype=torch.float32)
+        close_hand = (left_dist < 0.1).to(dtype=torch.float32) * (left_vel_norm < 0.2).to(dtype=torch.float32)
         self.dones["successful"] += torch.sum(close_hand).item()
         self.dones["successful_running"].append(self.dones["successful"])
         # print("successful: " + self.dones["timed_out"])
