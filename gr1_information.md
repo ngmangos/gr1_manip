@@ -9,7 +9,7 @@
 ['L_index_proximal_link', 'L_middle_proximal_link', 'L_pinky_proximal_link', 'L_ring_proximal_link', 'L_thumb_proximal_base_link', 'R_index_proximal_link', 'R_middle_proximal_link', 'R_pinky_proximal_link', 'R_ring_proximal_link', 'R_thumb_proximal_base_link', 'L_index_intermediate_link', 'L_middle_intermediate_link', 'L_pinky_intermediate_link', 'L_ring_intermediate_link', 'L_thumb_proximal_link', 'R_index_intermediate_link', 'R_middle_intermediate_link', 'R_pinky_intermediate_link', 'R_ring_intermediate_link', 'R_thumb_proximal_link', 'L_thumb_distal_link', 'R_thumb_distal_link']
 
 ## joint_names
->[Link for joint](http://support.fftai.cn/main/en/concepts/mechanical_system/#lower-limbs)
+>[Joint information doc](./GRX_joint_documentation.pdf)
 ### Non Hands and Arms
 ['left_hip_roll_joint', 'right_hip_roll_joint', 'waist_yaw_joint', 'left_hip_yaw_joint', 'right_hip_yaw_joint', 'waist_pitch_joint', 'left_hip_pitch_joint', 'right_hip_pitch_joint', 'waist_roll_joint', 'left_knee_pitch_joint', 'right_knee_pitch_joint', 'head_roll_joint','left_ankle_pitch_joint', 'right_ankle_pitch_joint', 'head_pitch_joint', 'left_ankle_roll_joint', 'right_ankle_roll_joint', 'head_yaw_joint',]
 ### Arm
