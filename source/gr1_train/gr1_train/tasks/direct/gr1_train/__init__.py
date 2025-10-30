@@ -13,7 +13,7 @@ from . import agents
 
 
 gym.register(
-    id="Template-Gr1-Train-Direct-v0",
+    id="Gr1-Manip",
     entry_point=f"{__name__}.gr1_train_env:Gr1TrainEnv",
     disable_env_checker=True,
     kwargs={
