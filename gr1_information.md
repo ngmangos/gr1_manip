@@ -1,3 +1,5 @@
+# GR1 Articulation data
+> [Isaac Lab Docs](https://isaac-sim.github.io/IsaacLab/main/source/api/lab/isaaclab.assets.html#isaaclab.assets.ArticulationData)
 ## body_names
 ### Non Hands and Arms
 ['base_link', 'left_thigh_roll_link', 'right_thigh_roll_link', 'waist_yaw_link', 'left_thigh_yaw_link', 'right_thigh_yaw_link', 'waist_pitch_link', 'left_thigh_pitch_link', 'right_thigh_pitch_link', 'waist_roll_link', 'left_shank_pitch_link', 'right_shank_pitch_link', 'head_roll_link', 'left_foot_pitch_link', 'right_foot_pitch_link', 'head_pitch_link', 'left_foot_roll_link', 'right_foot_roll_link', 'head_yaw_link',]
