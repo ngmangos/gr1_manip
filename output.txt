@@ -1,0 +1,15 @@
+################################################################################
+                      [1m Learning iteration 399/400 [0m                      
+
+                       Computation: 366 steps/s (collection: 2.738s, learning 0.058s)
+             Mean action noise std: 1.25
+          Mean value_function loss: 136505.0703
+               Mean surrogate loss: -0.0085
+                 Mean entropy loss: 11.4948
+                       Mean reward: -451.30
+               Mean episode length: 47.91
+--------------------------------------------------------------------------------
+                   Total timesteps: 409600
+                    Iteration time: 2.80s
+                      Time elapsed: 00:15:12
+                               ETA: 00:00:02
