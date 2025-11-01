@@ -29,23 +29,24 @@ class Gr1TrainEnv(DirectRLEnv):
             # "rew_lift": [],
             # "rew_dist_right": [],
             "rew_left_dist": [],
-            "rew_left_bonus": [],
-            "rew_left_vel": [],
+            "rew_success": [],
+            # "rew_left_vel": [],
             "rew_falling_penalty": [],
-            "rew_stopping_bonus": [],
+            # "rew_stopping_bonus": [],
             # "rew_obj_velocity": []
-            "rew_time": []
+            "rew_time": [],
+            "rew_palm_facing": []
         }
 
         self.dones = {
-            "dropped": 0,
-            "timed_out": 0,
-            "successful": 0,
-            "total": 0,
-            "dropped_running": [],
-            "timed_out_running": [],
-            "successful_running": [],
-            "total_running": [],
+            "dropped": [],
+            "timed_out": [],
+            "successful": [],
+            # "total": [],
+            "dropped_x_time": [],
+            "timed_out_x_time": [],
+            "successful_x_time": [],
+            # "total_x_time": [],
         }
 
         super().__init__(cfg, render_mode, **kwargs)
@@ -85,12 +86,14 @@ class Gr1TrainEnv(DirectRLEnv):
         # rew_lift = np.array(self.rewards["rew_lift"])
         # rew_dist_right = np.array(self.rewards["rew_dist_right"])
         rew_left_dist = np.array(self.rewards["rew_left_dist"])
-        rew_left_bonus = np.array(self.rewards["rew_left_bonus"])
+        rew_success = np.array(self.rewards["rew_success"])
         rew_time = np.array(self.rewards["rew_time"])
-        rew_left_vel = np.array(self.rewards["rew_left_vel"])
+        # rew_left_vel = np.array(self.rewards["rew_left_vel"])
         rew_falling_penalty = np.array(self.rewards["rew_falling_penalty"])
-        rew_stopping_bonus = np.array(self.rewards["rew_stopping_bonus"])
+        # rew_stopping_bonus = np.array(self.rewards["rew_stopping_bonus"])
         # rew_obj_vel = np.array(self.rewards["rew_obj_velocity"])
+        rew_palm_facing = np.array(self.rewards["rew_palm_facing"])
+
 
         x_coords = np.arange(len(self.rewards["total_reward"]))
 
@@ -98,11 +101,9 @@ class Gr1TrainEnv(DirectRLEnv):
         # plt.plot(x_coords,rew_dist_right)
         plt.plot(x_coords,rew_falling_penalty, label="Fall Pen")
         plt.plot(x_coords,rew_left_dist, label="Left Distance")
-        plt.plot(x_coords,rew_left_bonus, label="Left Bonus")
-        plt.plot(x_coords,rew_left_vel, label="Left Vel")
-        plt.plot(x_coords,rew_stopping_bonus, label="Stopping Bonus")
-        # plt.plot(x_coords,rew_obj_vel, label="Obj Vel")
+        plt.plot(x_coords,rew_success, label="Left Bonus")
         plt.plot(x_coords,rew_time,label="Time")
+        plt.plot(x_coords,rew_palm_facing,label="Palm Facing")
 
         plt.plot(x_coords,total_reward, label="Total")
 
@@ -113,7 +114,7 @@ class Gr1TrainEnv(DirectRLEnv):
         plt.savefig("rewards.png")
         plt.clf()
 
-        rewards = [(total_reward, "Total Reward"), (rew_left_dist, "Left Distance Reward"), (rew_left_bonus, "Left Bonus Reward"), (rew_time, "Time Reward"), (rew_left_vel, "Left Velocity Reward"), (rew_falling_penalty, "Falling Penalty"), (rew_stopping_bonus, "Stopping Bonus Reward")]
+        rewards = [(total_reward, "Total Reward"), (rew_left_dist, "Left Distance Reward"), (rew_success, "Success Reward"), (rew_time, "Time Reward"), (rew_falling_penalty, "Falling Penalty"), (rew_palm_facing, "Palm Facing")]
         for reward_tuple in rewards:
             reward_values, label = reward_tuple
             plt.plot(x_coords,reward_values)
@@ -125,23 +126,88 @@ class Gr1TrainEnv(DirectRLEnv):
 
         plt.clf()
 
-        dones_data = np.array([self.dones["dropped"], self.dones["timed_out"], self.dones["successful"]])
-        dones_labels = [f"Dropped: {int(self.dones['dropped'])}", f"Timed Out: {int(self.dones['timed_out'])}", f"Successful: {int(self.dones['successful'])}"]
+        # Creating charts for dones
+        dropped_grouped = []
+        timed_out_grouped = []
+        successful_grouped = []
+        dropped_x_time_grouped = []
+        timed_out_x_time_grouped = []
+        successful_x_time_grouped = []
+        dones_len = len(self.dones["dropped"])
+        for i in range(0, dones_len, 30):
+            i_end = min(i + 30, dones_len)
+            dropped_grouped.append(sum(self.dones["dropped"][i:i_end]))
+            timed_out_grouped.append(sum(self.dones["timed_out"][i:i_end]))
+            successful_grouped.append(sum(self.dones["successful"][i:i_end]))
+            dropped_x_time_grouped.append(sum(self.dones["dropped_x_time"][i:i_end]))
+            timed_out_x_time_grouped.append(sum(self.dones["timed_out_x_time"][i:i_end]))
+            successful_x_time_grouped.append(sum(self.dones["successful_x_time"][i:i_end]))
+
+        if sum(dropped_grouped[-2:]) == 0:
+            dones_data = np.array([sum(timed_out_grouped[-2:]), sum(successful_grouped[-2:])])
+            dones_labels = ["Timed Out", "Successful"]
+        else :
+            dones_data = np.array([sum(dropped_grouped[-2:]), sum(timed_out_grouped[-2:]), sum(successful_grouped[-2:])])
+            dones_labels = ["Dropped", "Timed Out", "Successful"]
         plt.pie(dones_data, labels=dones_labels, autopct='%1.1f%%', startangle=90)
         plt.axis('equal')
-        plt.savefig("dones.png")
+        plt.title("Final Dones Breakdown")
+        plt.savefig("dones_final.png")
         plt.clf()
 
-        x_coords = np.arange(len(self.dones["dropped_running"]))
-        plt.plot(x_coords,self.dones["dropped_running"], label="Dropped")
-        plt.plot(x_coords,self.dones["timed_out_running"], label="Timed out")
-        plt.plot(x_coords,self.dones["successful_running"], label="Successful")
-        plt.plot(x_coords,self.dones["total_running"], label="Total")
-        plt.xlabel("Step")
-        plt.ylabel("Number of Terminated")
-        plt.legend(loc="upper left")
-        plt.savefig("dones_running.png")
+        if sum(dropped_x_time_grouped[-2:]) == 0:
+            dones_data = np.array([sum(timed_out_x_time_grouped[-2:]), sum(successful_x_time_grouped[-2:])])
+            dones_labels = ["Timed Out", "Successful"]
+        else :
+            dones_data = np.array([sum(dropped_x_time_grouped[-2:]), sum(timed_out_x_time_grouped[-2:]), sum(successful_x_time_grouped[-2:])])
+            dones_labels = ["Dropped", "Timed Out", "Successful"]
+        plt.pie(dones_data, labels=dones_labels, autopct='%1.1f%%', startangle=90)
+        plt.axis('equal')
+        plt.title("Final Dones x Time Breakdown")
+        plt.savefig("dones_time_final.png")
+
         plt.clf()
+        grouped_len = len(dropped_grouped)
+        x_coords = np.linspace(0, dones_len, grouped_len)
+
+
+        dropped = np.array(dropped_grouped)
+        timed_out = np.array(timed_out_grouped)
+        successful = np.array(successful_grouped)
+        total = dropped + timed_out + successful
+        total[total == 0] = 1
+
+        dropped = dropped / total
+        timed_out = timed_out / total
+        successful = successful / total
+        plt.plot(x_coords,dropped,label="Dropped")
+        plt.plot(x_coords,timed_out,label="Timed Out")
+        plt.plot(x_coords,successful,label="Successful")
+        plt.title("Dones vs Steps")
+        plt.xlabel("Step")
+        plt.ylabel("Dones")
+        plt.legend(loc="upper left")
+        plt.savefig("dones.png")
+
+        plt.clf()
+
+        dropped = np.array(dropped_x_time_grouped)
+        timed_out = np.array(timed_out_x_time_grouped)
+        successful = np.array(successful_x_time_grouped)
+        total = dropped + timed_out + successful
+        total[total == 0] = 1
+        dropped = dropped / total
+        timed_out = timed_out / total
+        successful = successful / total
+        plt.plot(x_coords,dropped,label="Dropped")
+        plt.plot(x_coords,timed_out,label="Timed Out")
+        plt.plot(x_coords,successful,label="Successful")
+        plt.title("Dones x Time vs Steps")
+        plt.xlabel("Step")
+        plt.ylabel("Dones x Time")
+        plt.legend(loc="upper left")
+        plt.savefig("dones_x_time.png")
+
 
         super().close()          
 
@@ -169,8 +235,19 @@ class Gr1TrainEnv(DirectRLEnv):
 
     def _apply_action(self) -> None:
         normalised_actions = torch.tanh(self.actions)
-        scaled_actions = normalised_actions * self.cfg.max_action_value
-        noise_actions = scaled_actions + torch.randn_like(self.actions) * 0.05 # For exploration
+        # calculate distance
+        obj_pos = self.block.data.root_pos_w
+        link_data = self.robot.data.body_link_pos_w
+        # left_hand_pos = link_data[:, 29]
+        # left_dist = torch.linalg.norm(left_hand_pos - obj_pos, dim=-1)
+        # normalise distance to be between 0 and 1
+        left_finger_dist = torch.linalg.norm(link_data[:, 44] - obj_pos, dim=-1)
+        normalised_distance = torch.tanh(left_finger_dist / 0.5)
+        # print(f"Normalised distance: max={torch.max(normalised_distance).item()} min={torch.min(normalised_distance).item()}")
+        # When it gets closer, max action value decreases
+        scaled_actions = normalised_actions[:] * (normalised_distance.unsqueeze(1))
+        # For exploration and to simulate motor errors 
+        noise_actions = scaled_actions + torch.randn_like(self.actions) * 0.05 
         self.robot.set_joint_position_target(noise_actions, joint_ids=self._controlled_joint_ids.tolist())
 
     def _get_observations(self) -> dict:
@@ -180,106 +257,97 @@ class Gr1TrainEnv(DirectRLEnv):
         joint_vel = self.joint_vel[:, self._controlled_joint_ids].view(self.num_envs, -1)
         joint_vel += torch.randn_like(joint_vel) * 0.05
 
+        # Add the hand world frame pose to observation
+        hand_pose_w = self.robot.data.body_link_pose_w[:, 29]
+        hand_pose_w[:, :2] -= self.scene.env_origins[:, :2]
+
         # object world position and quaternion
         obj_pos = self.block.data.root_pos_w  # (num_envs, 3)
-        obj_quat = self.block.data.root_quat_w  # (num_envs, 4)
         obj_pos += torch.randn_like(obj_pos) * 0.05
-        obj_quat += torch.randn_like(obj_quat) * 0.05
 
-        obs = torch.cat((joint_pos, joint_vel, obj_pos, obj_quat), dim=-1)
+        obs = torch.cat((joint_pos, joint_vel, obj_pos, hand_pose_w), dim=-1)
         return {"policy": obs}
 
     def _get_rewards(self) -> torch.Tensor:
-        # Joint velocity (between a range)
-        # Distance of the hands the bowl (left hand more than right)
-        # Height of the bowl (big reward)
-        # Velocity of the bowl (betwen a range)
-
+        # Distance of the hand to the bowl
         obj_pos = self.block.data.root_pos_w # refers to the root position in the world frame
-        obj_z = obj_pos[:, 2]
-        # obj_velocity = self.block.data.root_vel_w
-        # 1.0166
+        obj_z = obj_pos[:, 2] # 1.0166 when it is on the table
 
         # Hand joints
         # left: name="left_hand_roll_link", index=29
         # right: name="right_hand_roll_link", index=30
+        # left yaw: name="left_hand_yaw_link", index=27
         # Left middle finger: name="L_middle_intermediate_link", index=44
-        left_hand_pos = None
-
+        # L Proximal Middle link: name="L_middle_proximal_link", index=34
         link_data = self.robot.data.body_link_pos_w
-        vel_data = self.robot.data.body_link_lin_vel_w
-        left_hand_pos = link_data[:, 44]
-        left_vel = vel_data[:, 29]
+        
+        left_hand_pos = link_data[:, 29]
         # euclidean distance to object
-        left_dist = torch.linalg.norm(left_hand_pos - obj_pos, dim=-1) # distance between hand and bowl
-        left_vel_norm = torch.linalg.norm(left_vel, dim=-1)
-        # print(f"Left dist norm: {left_dist}, Left velocity norm: {left_vel_norm}")
-        # print(f"Left velocity {left_vel_norm}")
-        rew_stopping_bonus = self.cfg.reward_scale_stopping_bonus * (left_dist < 0.1).to(dtype=torch.float32) * (left_vel_norm < 0.1).to(dtype=torch.float32)
+        palm_vector_a = link_data[:, 27] - left_hand_pos
+        palm_vector_b = link_data[:, 34] - left_hand_pos
+        palm_normal = torch.nn.functional.normalize(torch.cross(palm_vector_a, palm_vector_b), dim=-1)
+        obj_hand = obj_pos - left_hand_pos
+        obj_hand = torch.nn.functional.normalize(obj_hand, dim=1)
+        dot = torch.sum(palm_normal * obj_hand, dim=1)
 
-        # right_dist = torch.linalg.norm(right_hand_pos - obj_pos, dim=-1) # distance between hand and bowl
-        rew_left_dist = self.cfg.reward_scale_distance_left * left_dist * (left_dist < 0.1).to(dtype=torch.float32)
-        rew_left_bonus = self.cfg.reward_scale_left_bonus * (left_dist < 0.1).to(dtype=torch.float32)
+        rew_palm_facing = self.cfg.reward_palm_facing_object * torch.tanh((dot - 0.5) / 0.3)
 
-        rew_left_vel = self.cfg.reward_scale_left_vel * left_vel_norm
+        left_dist = torch.linalg.norm(obj_pos - left_hand_pos, dim=-1) # distance between hand and bowl
+        rew_left_dist = self.cfg.reward_scale_distance_left * left_dist * (left_dist > 0.1).to(dtype=torch.float32)
+
+        # Palm facing block
+        rew_success = self.cfg.reward_scale_success * (left_dist <= 0.15).to(dtype=torch.float32) * (dot > 0.7).to(dtype=torch.float32)
 
         rew_falling_penalty = self.cfg.reward_scale_falling_penalty * (obj_z < 0.8).to(dtype=torch.float32)
-        
-        # rew_obj_vel = self.cfg.reward_scale_obj_vel * torch.linalg.norm(obj_velocity)
 
-        # rew_dist_right = self.cfg.reward_scale_distance_right * right_dist
-
-        # rew_lift = self.cfg.reward_scale_lift * (obj_z > 1.1).to(dtype=torch.float32) * (obj_z < 1.5).to(dtype=torch.float32)
-        # print(f"Episode length buff {self.episode_length_buf}")
         rew_time = self.cfg.reward_scale_time * self.episode_length_buf
-        # rew_object_velocity = self.cfg.reward_scale_velocity * (obj_velocity > 0.1 and obj_velocity < 0.5).to(dtype=torch.float32)
 
-        total_reward = rew_left_dist + rew_left_bonus + rew_time + rew_falling_penalty + rew_stopping_bonus + rew_left_vel
+        total_reward = rew_left_dist + rew_success + rew_time + rew_falling_penalty + rew_palm_facing
 
         self.rewards["total_reward"].append(torch.mean(total_reward).item())
-        # self.rewards["rew_lift"].append(torch.mean(rew_lift).item())
-        # self.rewards["rew_dist_right"].append(torch.mean(rew_dist_right).item())
         self.rewards["rew_left_dist"].append(torch.mean(rew_left_dist).item())
-        self.rewards["rew_left_bonus"].append(torch.mean(rew_left_bonus).item())
-        self.rewards["rew_left_vel"].append(torch.mean(rew_left_vel).item())
+        self.rewards["rew_success"].append(torch.mean(rew_success).item())
         self.rewards["rew_falling_penalty"].append(torch.mean(rew_falling_penalty).item())
-        self.rewards["rew_stopping_bonus"].append(torch.mean(rew_stopping_bonus).item())
-
-        # self.rewards["rew_obj_velocity"].append(torch.mean(rew_obj_vel).item())
         self.rewards["rew_time"].append(torch.mean(rew_time).item())
+        self.rewards["rew_palm_facing"].append(torch.mean(rew_palm_facing).item())
         return total_reward
 
     def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
         # object dropped too low or timeout
         obj_pos = self.block.data.root_pos_w
-        dropped = (obj_pos[:, 2] < 0.5).to(dtype=torch.float32)  # block is below 0.5m
-        self.dones["dropped"] += torch.sum(dropped).item()
-        self.dones["dropped_running"].append(self.dones["dropped"])
+        dropped = (obj_pos[:, 2] < 0.8).to(dtype=torch.float32)  # block is below 0.5m
+        self.dones["dropped"].append(torch.sum(dropped).item())
+        self.dones["dropped_x_time"].append(torch.sum(dropped * self.episode_length_buf).item())
         # print("Dropped: " + self.dones["dropped"])
 
         # print(f"Max episode: {self.max_episode_length}, Episode length: {self.episode_length_buf}")
         time_out = (self.episode_length_buf >= self.max_episode_length - 1).to(dtype=torch.float32)
-        self.dones["timed_out"] += torch.sum(time_out).item()
-        self.dones["timed_out_running"].append(self.dones["timed_out"])
+        self.dones["timed_out"].append(torch.sum(time_out).item())
+        self.dones["timed_out_x_time"].append(torch.sum(time_out * self.episode_length_buf).item())
         # print("timed_out: " + self.dones['timed_out])
 
         link_data = self.robot.data.body_link_pos_w
-        vel_data = self.robot.data.body_link_lin_vel_w
-        left_hand_pos = link_data[:, 44]
-        left_vel = vel_data[:, 29]
+        left_hand_pos = link_data[:, 29]
         # euclidean distance to object
         left_dist = torch.linalg.norm(left_hand_pos - obj_pos, dim=-1) # distance between hand and bowl
-        left_vel_norm = torch.linalg.norm(left_vel, dim=-1)
-        close_hand = (left_dist < 0.2).to(dtype=torch.float32) * (left_vel_norm < 0.2).to(dtype=torch.float32)
-        self.dones["successful"] += torch.sum(close_hand).item()
-        self.dones["successful_running"].append(self.dones["successful"])
-        # print("successful: " + self.dones["timed_out"])
-        self.dones["total"] += torch.sum(dropped).item() + torch.sum(time_out).item() + torch.sum(close_hand).item()
-        self.dones["total_running"].append(self.dones["total"])
 
-        done = torch.logical_or(close_hand, dropped).to(dtype=torch.float32)
+        # Is the palm facing
+        palm_vector_a = link_data[:, 27] - left_hand_pos
+        palm_vector_b = link_data[:, 34] - left_hand_pos
+        palm_normal = torch.nn.functional.normalize(torch.cross(palm_vector_a, palm_vector_b), dim=-1)
+        obj_hand = obj_pos - left_hand_pos
+        obj_hand = torch.nn.functional.normalize(obj_hand, dim=1)
+        dot = torch.sum(palm_normal * obj_hand, dim=1)
 
-        return done, time_out
+        success = (left_dist <= 0.15).to(dtype=torch.float32) * (dot > 0.7).to(dtype=torch.float32)
+        self.dones["successful"].append(torch.sum(success).item())
+        self.dones["successful_x_time"].append(torch.sum(success * self.episode_length_buf).item())
+
+        # self.dones["total"].append(self.dones["dropped"][-1] + self.dones["timed_out"][-1] + self.dones["successful"][-1])
+        # self.dones["total_x_time"].append(self.dones["dropped_x_time"][-1] + self.dones["timed_out_x_time"][-1] + self.dones["successful_x_time"][-1])
+        fails = torch.logical_or(time_out, dropped).to(dtype=torch.float32)
+
+        return success, fails
 
     def _reset_idx(self, env_ids: Sequence[int] | None):
         if env_ids is None:
@@ -291,7 +359,7 @@ class Gr1TrainEnv(DirectRLEnv):
         joint_vel = self.robot.data.default_joint_vel[env_ids].clone()
 
         # small uniform noise to joints
-        noise_scale = 0.02
+        noise_scale = 0.01
         joint_pos[:, self._controlled_joint_ids] += sample_uniform(
             -noise_scale, noise_scale, joint_pos[:, self._controlled_joint_ids].shape, joint_pos.device
         )
@@ -300,11 +368,11 @@ class Gr1TrainEnv(DirectRLEnv):
 
         # Bring object near the table start location with small noise
         # object initial pose (world)
-        obj_init_pos = torch.tensor([-0.3, 0.45, 1.0], device=joint_pos.device).unsqueeze(0).repeat(len(env_ids), 1)
+        obj_init_pos = torch.tensor([-0.45, 0.45, 1.0], device=joint_pos.device).unsqueeze(0).repeat(len(env_ids), 1)
 
         # Adds the env positions (just for x and y), add offsets based on each env origin
         obj_init_pos[:, :2] += self.scene.env_origins[env_ids, :2]
-        obj_init_pos[:, 0] += sample_uniform(-0.2, 0.2, (len(env_ids), 1), joint_pos.device).squeeze(-1)
+        obj_init_pos[:, 0] += sample_uniform(-0.3, 0.3, (len(env_ids), 1), joint_pos.device).squeeze(-1)
         obj_init_pos[:, 1] += sample_uniform(-0.1, 0.1, (len(env_ids), 1), joint_pos.device).squeeze(-1)
 
         # write robot joint states

@@ -1,0 +1,10 @@
+pyproject.toml
+setup.py
+gr1_train/__init__.py
+gr1_train/ui_extension_example.py
+gr1_train.egg-info/PKG-INFO
+gr1_train.egg-info/SOURCES.txt
+gr1_train.egg-info/dependency_links.txt
+gr1_train.egg-info/not-zip-safe
+gr1_train.egg-info/requires.txt
+gr1_train.egg-info/top_level.txt

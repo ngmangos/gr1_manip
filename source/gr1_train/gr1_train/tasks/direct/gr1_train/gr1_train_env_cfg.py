@@ -31,7 +31,7 @@ class ObjectTableSceneCfg(InteractiveSceneCfg):
     block = RigidObjectCfg(
         prim_path="/World/envs/env_.*/Block",
         # init_state=RigidObjectCfg.InitialStateCfg(pos=[-0.45, 0.45, 0.9996], rot=[1, 0, 0, 0]),
-        init_state=RigidObjectCfg.InitialStateCfg(pos=[-0.3, 0.45, 1.0], rot=[1, 0, 0, 0]),
+        init_state=RigidObjectCfg.InitialStateCfg(pos=[-0.45, 0.45, 1.0], rot=[1, 0, 0, 0]),
         spawn=UsdFileCfg(
             usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Blocks/DexCube/dex_cube_instanceable.usd",
             scale=(0.75, 0.75, 0.75),
@@ -97,33 +97,33 @@ class ObjectTableSceneCfg(InteractiveSceneCfg):
 @configclass
 class Gr1TrainEnvCfg(DirectRLEnvCfg):
     decimation: int = 6
-    episode_length_s: float = 5.0
+    episode_length_s: float = 10.0
 
     sim: SimulationCfg = SimulationCfg(dt=1.0 / 120.0, render_interval=2)
     scene: ObjectTableSceneCfg = ObjectTableSceneCfg(num_envs=64, env_spacing=2.5, replicate_physics=True)
 
     action_space: int = 7
     # observation: joint positions (7), joint velocities (7) * 2 (left and right)
-    # object position (3), object orientation=quat (4)
-    observation_space: int = 14 + 7
+    # object position (3)
+    # Left hand roll link pose (7)
+    observation_space: int = 14 + 3 + 7
     state_space: int = 0
 
-    max_action_value = 0.5
-
-    # temp_urdf_dir: str = tempfile.gettempdir()
-
+    max_action = 0.5
     # reward scaling parameters
     # reward_scale_lift: float = 1.0
     # reward_scale_distance_right: float = -10.0
-    reward_scale_distance_left: float = -10.0
-    reward_scale_left_bonus: float = 10.0
-    reward_scale_stopping_bonus: float = 150.0
-    reward_scale_left_vel: float = -0.01
+    reward_scale_distance_left: float = -4.0
+    reward_scale_success: float = 150.0
+    reward_palm_facing_object: float = 30.0
+
+    # reward_scale_stopping_bonus: float = 150.0
+    # reward_scale_left_vel: float = -0.01
     # reward_scale_obj_vel: float = -0.7
     reward_scale_falling_penalty: float = -1000.0
 
-    reward_scale_time: float = -0.15
-    reward_scale_velocity: float = 0.5
+    reward_scale_time: float = -0.1
+    # reward_scale_velocity: float = 0.5
 
     def __post_init__(self):
         idle_action = torch.zeros(self.action_space)

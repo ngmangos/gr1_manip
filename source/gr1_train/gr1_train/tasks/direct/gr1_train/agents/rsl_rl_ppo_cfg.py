@@ -10,7 +10,7 @@ from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlPpoActorCriticCfg, R
 @configclass
 class PPORunnerCfg(RslRlOnPolicyRunnerCfg):
     num_steps_per_env = 32
-    max_iterations = 600
+    max_iterations = 100
     save_interval = 50
     experiment_name = "gr1-manip"
     policy = RslRlPpoActorCriticCfg(
