@@ -10,17 +10,11 @@ from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlPpoActorCriticCfg, R
 
 @configclass
 class PPORunnerCfg(RslRlOnPolicyRunnerCfg):
-<<<<<<< HEAD
-    num_steps_per_env = 32
-    max_iterations = 100
-    save_interval = 50
-=======
     num_steps_per_env = 32 # Each environment collects 16 timesteps before a policy update
     # With N environments, the total rollout batch size is N * 16 
     # Lower values like 16 have more frequent updates, faster learning, but noisier gradients
     max_iterations = 600 # Total number of PPO iterations to perform
     save_interval = 50 # saves model checkpoints every 50 iterations
->>>>>>> 88a46ca0820e4d89d5ec5c4fc6235c0d34985279
     experiment_name = "gr1-manip"
     policy = RslRlPpoActorCriticCfg(
         init_noise_std=1.0, # Initial standard deviation for action sampling noise (high noise encourages early exploration)

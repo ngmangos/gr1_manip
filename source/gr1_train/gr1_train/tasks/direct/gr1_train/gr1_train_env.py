@@ -290,13 +290,7 @@ class Gr1TrainEnv(DirectRLEnv):
         obj_hand = torch.nn.functional.normalize(obj_hand, dim=1)
         dot = torch.sum(palm_normal * obj_hand, dim=1)
 
-<<<<<<< HEAD
         rew_palm_facing = self.cfg.reward_palm_facing_object * torch.tanh((dot - 0.5) / 0.3)
-=======
-        # right_dist = torch.linalg.norm(right_hand_pos - obj_pos, dim=-1) # distance between hand and bowl
-        rew_left_dist = self.cfg.reward_scale_distance_left * left_dist * (left_dist > 0.1).to(dtype=torch.float32)
-        rew_left_bonus = self.cfg.reward_scale_left_bonus * (left_dist < 0.1).to(dtype=torch.float32)
->>>>>>> 88a46ca0820e4d89d5ec5c4fc6235c0d34985279
 
         left_dist = torch.linalg.norm(obj_pos - left_hand_pos, dim=-1) # distance between hand and bowl
         rew_left_dist = self.cfg.reward_scale_distance_left * left_dist * (left_dist > 0.1).to(dtype=torch.float32)
@@ -305,14 +299,6 @@ class Gr1TrainEnv(DirectRLEnv):
         rew_success = self.cfg.reward_scale_success * (left_dist <= 0.15).to(dtype=torch.float32) * (dot > 0.7).to(dtype=torch.float32)
 
         rew_falling_penalty = self.cfg.reward_scale_falling_penalty * (obj_z < 0.8).to(dtype=torch.float32)
-<<<<<<< HEAD
-
-=======
-        # rew_obj_vel = self.cfg.reward_scale_obj_vel * torch.linalg.norm(obj_velocity)
-        # rew_dist_right = self.cfg.reward_scale_distance_right * right_dist
-        # rew_lift = self.cfg.reward_scale_lift * (obj_z > 1.1).to(dtype=torch.float32) * (obj_z < 1.5).to(dtype=torch.float32)
-        # print(f"Episode length buff {self.episode_length_buf}")
->>>>>>> 88a46ca0820e4d89d5ec5c4fc6235c0d34985279
         rew_time = self.cfg.reward_scale_time * self.episode_length_buf
 
         total_reward = rew_left_dist + rew_success + rew_time + rew_falling_penalty + rew_palm_facing
@@ -343,16 +329,6 @@ class Gr1TrainEnv(DirectRLEnv):
         left_hand_pos = link_data[:, 29]
         # euclidean distance to object
         left_dist = torch.linalg.norm(left_hand_pos - obj_pos, dim=-1) # distance between hand and bowl
-<<<<<<< HEAD
-=======
-        left_vel_norm = torch.linalg.norm(left_vel, dim=-1)
-        close_hand = (left_dist < 0.1).to(dtype=torch.float32) * (left_vel_norm < 0.2).to(dtype=torch.float32)
-        self.dones["successful"] += torch.sum(close_hand).item()
-        self.dones["successful_running"].append(self.dones["successful"])
-        # print("successful: " + self.dones["timed_out"])
-        self.dones["total"] += torch.sum(dropped).item() + torch.sum(time_out).item() + torch.sum(close_hand).item()
-        self.dones["total_running"].append(self.dones["total"])
->>>>>>> 88a46ca0820e4d89d5ec5c4fc6235c0d34985279
 
         # Is the palm facing
         palm_vector_a = link_data[:, 27] - left_hand_pos
