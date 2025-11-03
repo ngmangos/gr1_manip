@@ -10,9 +10,7 @@ from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlPpoActorCriticCfg, R
 
 @configclass
 class PPORunnerCfg(RslRlOnPolicyRunnerCfg):
-    num_steps_per_env = 32 # Each environment collects 16 timesteps before a policy update
-    # With N environments, the total rollout batch size is N * 16 
-    # Lower values like 16 have more frequent updates, faster learning, but noisier gradients
+    num_steps_per_env = 32 # horizon, the number of (physics) steps before updating the policy
     max_iterations = 600 # Total number of PPO iterations to perform
     save_interval = 50 # saves model checkpoints every 50 iterations
     experiment_name = "gr1-manip"
@@ -28,17 +26,17 @@ class PPORunnerCfg(RslRlOnPolicyRunnerCfg):
         activation="elu",
     )
     algorithm = RslRlPpoAlgorithmCfg( # Specifically the PPO algorithm
-        value_loss_coef=1.0, # Make sure actor and critic improve together
+        value_loss_coef=1.0,
         use_clipped_value_loss=True, # Keeping learning safe
-        clip_param=0.2, # Clipping the distribution change to 0.2
-        # prevents policy from making destructive large updates
+        clip_param=0.2, # Clipping the distribution change to 0.2, prevents policy from making destructive large updates
         entropy_coef=0.005, # encourage exploration by penalising overly deterministic policies
-        num_learning_epochs=5, # gradient updates per PPO iteration
-        num_mini_batches=4, # number of mini-batches to split the rollout data into during training
+        num_learning_epochs=5, # A mini batch being sent through the network is one epoch, So it feeds each of the 4 mini batches through 5 times
+        num_mini_batches=4, # After process a horzin length of steps, PPO doesn't feed it into the network at once, breaks it up into mini bacthes
         learning_rate=1.0e-4,
         schedule="adaptive",
-        gamma=0.99, # discount factor for future rewards
-        lam=0.95, # advantage estimation parameter -> balance bias and variance in advantage estimates
+        # gamma and lambda perform bias-variance trade off
+        gamma=0.99, # discount factor for future rewards (higher gamma is lower bias for recent -> higher variance)
+        lam=0.95, # smoothening factor (lower variance)
         desired_kl=0.01, # KL divergence is how we define how probability distribtion A is different from B
-        max_grad_norm=1.0, # Gradient clipping threshold
+        max_grad_norm=1.0,
     )
