@@ -58,7 +58,11 @@ class Gr1TrainEnv(DirectRLEnv):
             "left_elbow_pitch_joint",
             "left_wrist_yaw_joint",
             "left_wrist_roll_joint",
-            "left_wrist_pitch_joint"
+            "left_wrist_pitch_joint",
+            # hip
+            # "waist_yaw_joint",
+            # "waist_pitch_joint",
+            # "waist_roll_joint",
         ]
 
         # If number of joints lower than action space, pad with last joint
@@ -93,7 +97,6 @@ class Gr1TrainEnv(DirectRLEnv):
         # rew_stopping_bonus = np.array(self.rewards["rew_stopping_bonus"])
         # rew_obj_vel = np.array(self.rewards["rew_obj_velocity"])
         rew_palm_facing = np.array(self.rewards["rew_palm_facing"])
-
 
         x_coords = np.arange(len(self.rewards["total_reward"]))
 
@@ -199,6 +202,7 @@ class Gr1TrainEnv(DirectRLEnv):
         dropped = dropped / total
         timed_out = timed_out / total
         successful = successful / total
+
         plt.plot(x_coords,dropped,label="Dropped")
         plt.plot(x_coords,timed_out,label="Timed Out")
         plt.plot(x_coords,successful,label="Successful")
@@ -245,9 +249,10 @@ class Gr1TrainEnv(DirectRLEnv):
         normalised_distance = torch.tanh(left_finger_dist / 0.5)
         # print(f"Normalised distance: max={torch.max(normalised_distance).item()} min={torch.min(normalised_distance).item()}")
         # When it gets closer, max action value decreases
-        scaled_actions = normalised_actions[:] * (normalised_distance.unsqueeze(1))
+        # "left_shoulder_pitch_joint", "left_shoulder_roll_joint", "left_shoulder_yaw_joint", "left_elbow_pitch_joint" but wrist not slowed
+        scaled_actions = normalised_actions[:,:4] * (normalised_distance.unsqueeze(1))
         # For exploration and to simulate motor errors 
-        noise_actions = scaled_actions + torch.randn_like(self.actions) * 0.05 
+        noise_actions = torch.cat((scaled_actions, normalised_actions[:, 4:]), dim=-1) + torch.randn_like(self.actions) * 0.05 
         self.robot.set_joint_position_target(noise_actions, joint_ids=self._controlled_joint_ids.tolist())
 
     def _get_observations(self) -> dict:
@@ -279,24 +284,29 @@ class Gr1TrainEnv(DirectRLEnv):
         # left yaw: name="left_hand_yaw_link", index=27
         # Left middle finger: name="L_middle_intermediate_link", index=44
         # L Proximal Middle link: name="L_middle_proximal_link", index=34
+        # left_wrist_yaw_joint#26 left_wrist_pitch_joint#30 left_wrist_roll_joint#28
         link_data = self.robot.data.body_link_pos_w
         
-        left_hand_pos = link_data[:, 29]
+        left_wrist_pos = link_data[:, 29]
+        left_middle_pos = link_data[:, 34]
+        left_ring_pos = link_data[:, 36]
         # euclidean distance to object
-        palm_vector_a = link_data[:, 27] - left_hand_pos
-        palm_vector_b = link_data[:, 34] - left_hand_pos
+        palm_vector_a = left_ring_pos - left_wrist_pos
+        palm_vector_b = left_middle_pos - left_wrist_pos
         palm_normal = torch.nn.functional.normalize(torch.cross(palm_vector_a, palm_vector_b), dim=-1)
-        obj_hand = obj_pos - left_hand_pos
+        palm_pos = (left_middle_pos + left_wrist_pos) / 2
+
+        obj_hand = obj_pos - palm_pos
         obj_hand = torch.nn.functional.normalize(obj_hand, dim=1)
-        dot = torch.sum(palm_normal * obj_hand, dim=1)
+        dot = torch.sum(palm_normal * obj_hand, dim=1)        
 
         rew_palm_facing = self.cfg.reward_palm_facing_object * torch.tanh((dot - 0.5) / 0.3)
 
-        left_dist = torch.linalg.norm(obj_pos - left_hand_pos, dim=-1) # distance between hand and bowl
+        left_dist = torch.linalg.norm(obj_pos - palm_pos, dim=-1) # distance between hand and bowl
         rew_left_dist = self.cfg.reward_scale_distance_left * left_dist * (left_dist > 0.1).to(dtype=torch.float32)
 
         # Palm facing block
-        rew_success = self.cfg.reward_scale_success * (left_dist <= 0.15).to(dtype=torch.float32) * (dot > 0.7).to(dtype=torch.float32)
+        rew_success = self.cfg.reward_scale_success * (left_dist <= 0.15).to(dtype=torch.float32) * (dot > 0.5).to(dtype=torch.float32)
 
         rew_falling_penalty = self.cfg.reward_scale_falling_penalty * (obj_z < 0.8).to(dtype=torch.float32)
         rew_time = self.cfg.reward_scale_time * self.episode_length_buf
@@ -326,19 +336,22 @@ class Gr1TrainEnv(DirectRLEnv):
         # print("timed_out: " + self.dones['timed_out])
 
         link_data = self.robot.data.body_link_pos_w
-        left_hand_pos = link_data[:, 29]
+        left_wrist_pos = link_data[:, 29]
+        left_middle_pos = link_data[:, 34]
+        left_ring_pos = link_data[:, 36]
+        palm_pos = (left_middle_pos + left_wrist_pos) / 2
         # euclidean distance to object
-        left_dist = torch.linalg.norm(left_hand_pos - obj_pos, dim=-1) # distance between hand and bowl
+        left_dist = torch.linalg.norm(palm_pos - obj_pos, dim=-1) # distance between hand and bowl
 
         # Is the palm facing
-        palm_vector_a = link_data[:, 27] - left_hand_pos
-        palm_vector_b = link_data[:, 34] - left_hand_pos
+        palm_vector_a = left_ring_pos - left_wrist_pos
+        palm_vector_b = left_middle_pos - left_wrist_pos
         palm_normal = torch.nn.functional.normalize(torch.cross(palm_vector_a, palm_vector_b), dim=-1)
-        obj_hand = obj_pos - left_hand_pos
+        obj_hand = obj_pos - palm_pos
         obj_hand = torch.nn.functional.normalize(obj_hand, dim=1)
         dot = torch.sum(palm_normal * obj_hand, dim=1)
 
-        success = (left_dist <= 0.15).to(dtype=torch.float32) * (dot > 0.7).to(dtype=torch.float32)
+        success = (left_dist <= 0.15).to(dtype=torch.float32) * (dot > 0.5).to(dtype=torch.float32)
         self.dones["successful"].append(torch.sum(success).item())
         self.dones["successful_x_time"].append(torch.sum(success * self.episode_length_buf).item())
 
@@ -358,7 +371,7 @@ class Gr1TrainEnv(DirectRLEnv):
         joint_vel = self.robot.data.default_joint_vel[env_ids].clone()
 
         # small uniform noise to joints
-        noise_scale = 0.01
+        noise_scale = 0.02
         joint_pos[:, self._controlled_joint_ids] += sample_uniform(
             -noise_scale, noise_scale, joint_pos[:, self._controlled_joint_ids].shape, joint_pos.device
         )
@@ -367,7 +380,7 @@ class Gr1TrainEnv(DirectRLEnv):
 
         # Bring object near the table start location with small noise
         # object initial pose (world)
-        obj_init_pos = torch.tensor([-0.45, 0.45, 1.0], device=joint_pos.device).unsqueeze(0).repeat(len(env_ids), 1)
+        obj_init_pos = torch.tensor([-0.45, 0.40, 1.0], device=joint_pos.device).unsqueeze(0).repeat(len(env_ids), 1)
 
         # Adds the env positions (just for x and y), add offsets based on each env origin
         obj_init_pos[:, :2] += self.scene.env_origins[env_ids, :2]

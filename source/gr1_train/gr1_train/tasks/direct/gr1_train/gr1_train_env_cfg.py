@@ -64,13 +64,16 @@ class ObjectTableSceneCfg(InteractiveSceneCfg):
                 "right_wrist_roll_joint": 0.0,
                 "right_wrist_pitch_joint": 0.0,
                 # left-arm
-                "left_shoulder_pitch_joint": 0.0,
+                "left_shoulder_pitch_joint": -1.0,
                 "left_shoulder_roll_joint": 0.0,
                 "left_shoulder_yaw_joint": 0.0,
                 "left_elbow_pitch_joint": -1.5708,
                 "left_wrist_yaw_joint": 0.0,
                 "left_wrist_roll_joint": 0.0,
                 "left_wrist_pitch_joint": 0.0,
+                # "waist_yaw_joint": 0.0,
+                # "waist_pitch_joint": 0.0,
+                # "waist_roll_joint": 0.0,
                 # -- keep all others at zero
                 "head_.*": 0.0,
                 "waist_.*": 0.0,
@@ -97,15 +100,16 @@ class ObjectTableSceneCfg(InteractiveSceneCfg):
 @configclass
 class Gr1TrainEnvCfg(DirectRLEnvCfg):
     decimation: int = 6
-    episode_length_s: float = 10.0
+    episode_length_s: float = 5.0
 
     sim: SimulationCfg = SimulationCfg(dt=1.0 / 120.0, render_interval=2)
     scene: ObjectTableSceneCfg = ObjectTableSceneCfg(num_envs=64, env_spacing=2.5, replicate_physics=True)
 
     action_space: int = 7
-    # observation: joint positions (7), joint velocities (7) * 2 (left and right)
+    # observation: joint positions (7), joint velocities (7) (left and right)
     # object position (3)
     # Left hand roll link pose (7)
+    # waist joints: pos (3) vel (3)
     observation_space: int = 14 + 3 + 7
     state_space: int = 0
 
@@ -115,14 +119,14 @@ class Gr1TrainEnvCfg(DirectRLEnvCfg):
     # reward_scale_distance_right: float = -10.0
     reward_scale_distance_left: float = -4.0
     reward_scale_success: float = 150.0
-    reward_palm_facing_object: float = 30.0
+    reward_palm_facing_object: float = 10.0
 
     # reward_scale_stopping_bonus: float = 150.0
     # reward_scale_left_vel: float = -0.01
     # reward_scale_obj_vel: float = -0.7
     reward_scale_falling_penalty: float = -1000.0
 
-    reward_scale_time: float = -0.1
+    reward_scale_time: float = -0.3
     # reward_scale_velocity: float = 0.5
 
     def __post_init__(self):
