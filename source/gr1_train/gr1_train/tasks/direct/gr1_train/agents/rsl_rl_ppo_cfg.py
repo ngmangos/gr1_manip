@@ -13,7 +13,7 @@ class PPORunnerCfg(RslRlOnPolicyRunnerCfg):
     num_steps_per_env = 32 # Each environment collects 16 timesteps before a policy update
     # With N environments, the total rollout batch size is N * 16 
     # Lower values like 16 have more frequent updates, faster learning, but noisier gradients
-    max_iterations = 600 # Total number of PPO iterations to perform
+    max_iterations = 400 # Total number of PPO iterations to perform
     save_interval = 50 # saves model checkpoints every 50 iterations
     experiment_name = "gr1-manip"
     policy = RslRlPpoActorCriticCfg(
