@@ -15,6 +15,7 @@ from isaaclab.utils.math import sample_uniform
 from isaaclab_assets.robots.fourier import GR1T2_HIGH_PD_CFG  # isort: skip
 
 from .gr1_train_env_cfg import Gr1TrainEnvCfg
+from isaaclab.sensors import ContactSensor
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -35,7 +36,9 @@ class Gr1TrainEnv(DirectRLEnv):
             # "rew_stopping_bonus": [],
             # "rew_obj_velocity": []
             "rew_time": [],
-            "rew_palm_facing": []
+            "rew_pinky": [],
+            "rew_palm_facing": [],
+            "rew_object_orientation": []
         }
 
         self.dones = {
@@ -97,6 +100,9 @@ class Gr1TrainEnv(DirectRLEnv):
         # rew_stopping_bonus = np.array(self.rewards["rew_stopping_bonus"])
         # rew_obj_vel = np.array(self.rewards["rew_obj_velocity"])
         rew_palm_facing = np.array(self.rewards["rew_palm_facing"])
+        rew_pinky = np.array(self.rewards["rew_pinky"])
+        rew_object_orientation = np.array(self.rewards["rew_object_orientation"])
+
 
         x_coords = np.arange(len(self.rewards["total_reward"]))
 
@@ -107,6 +113,8 @@ class Gr1TrainEnv(DirectRLEnv):
         plt.plot(x_coords,rew_success, label="Left Bonus")
         plt.plot(x_coords,rew_time,label="Time")
         plt.plot(x_coords,rew_palm_facing,label="Palm Facing")
+        plt.plot(x_coords,rew_pinky,label="Pinky")
+        plt.plot(x_coords,rew_object_orientation,label="Obj Ori")
 
         plt.plot(x_coords,total_reward, label="Total")
 
@@ -117,7 +125,7 @@ class Gr1TrainEnv(DirectRLEnv):
         plt.savefig("rewards.png")
         plt.clf()
 
-        rewards = [(total_reward, "Total Reward"), (rew_left_dist, "Left Distance Reward"), (rew_success, "Success Reward"), (rew_time, "Time Reward"), (rew_falling_penalty, "Falling Penalty"), (rew_palm_facing, "Palm Facing")]
+        rewards = [(total_reward, "Total Reward"), (rew_left_dist, "Left Distance Reward"), (rew_success, "Success Reward"), (rew_time, "Time Reward"), (rew_falling_penalty, "Falling Penalty"), (rew_palm_facing, "Palm Facing"), (rew_pinky, "Pinky"), (rew_object_orientation, "Obj Ori")]
         for reward_tuple in rewards:
             reward_values, label = reward_tuple
             plt.plot(x_coords,reward_values)
@@ -219,6 +227,9 @@ class Gr1TrainEnv(DirectRLEnv):
         #  articulation and block
         self.robot = Articulation(cfg=self.cfg.scene.robot)
         self.block = RigidObject(cfg=self.cfg.scene.block)
+        self.force_hand = ContactSensor(self.cfg.scene.contact_forces_left_hand)
+        self.force_finger = ContactSensor(self.cfg.scene.contact_forces_left_hand)
+
         
         # spawn ground
         spawn_ground_plane(prim_path="/World/Ground", cfg=GroundPlaneCfg())
@@ -233,6 +244,9 @@ class Gr1TrainEnv(DirectRLEnv):
         # add object and robot to scene
         self.scene.articulations["robot"] = self.robot
         self.scene.rigid_objects["block"] = self.block
+        self.scene.sensors["contact_forces_left_hand"] = self.force_hand
+        self.scene.sensors["contact_forces_left_finger"] = self.force_finger
+
 
     def _pre_physics_step(self, actions: torch.Tensor) -> None:
         self.actions = actions.clone()
@@ -246,13 +260,15 @@ class Gr1TrainEnv(DirectRLEnv):
         # left_dist = torch.linalg.norm(left_hand_pos - obj_pos, dim=-1)
         # normalise distance to be between 0 and 1
         left_finger_dist = torch.linalg.norm(link_data[:, 44] - obj_pos, dim=-1)
-        normalised_distance = torch.tanh(left_finger_dist / 0.5)
+        normalised_distance = torch.tanh(left_finger_dist / 0.5) * 2
         # print(f"Normalised distance: max={torch.max(normalised_distance).item()} min={torch.min(normalised_distance).item()}")
         # When it gets closer, max action value decreases
         # "left_shoulder_pitch_joint", "left_shoulder_roll_joint", "left_shoulder_yaw_joint", "left_elbow_pitch_joint" but wrist not slowed
-        scaled_actions = normalised_actions[:,:4] * (normalised_distance.unsqueeze(1))
+        scaled_actions = normalised_actions * (normalised_distance.unsqueeze(1))
+
+        noise_actions = scaled_actions + torch.randn_like(self.actions) * 0.05
         # For exploration and to simulate motor errors 
-        noise_actions = torch.cat((scaled_actions, normalised_actions[:, 4:]), dim=-1) + torch.randn_like(self.actions) * 0.05 
+        # noise_actions = torch.cat((scaled_actions, normalised_actions[:, 4:]), dim=-1) + torch.randn_like(self.actions) * 0.05 
         self.robot.set_joint_position_target(noise_actions, joint_ids=self._controlled_joint_ids.tolist())
 
     def _get_observations(self) -> dict:
@@ -267,16 +283,27 @@ class Gr1TrainEnv(DirectRLEnv):
         hand_pose_w[:, :2] -= self.scene.env_origins[:, :2]
 
         # object world position and quaternion
-        obj_pos = self.block.data.root_pos_w  # (num_envs, 3)
-        obj_pos += torch.randn_like(obj_pos) * 0.05
+        obj_pose = self.block.data.root_pose_w  # (num_envs, 3)
+        obj_pose += torch.randn_like(obj_pose) * 0.05
 
-        obs = torch.cat((joint_pos, joint_vel, obj_pos, hand_pose_w), dim=-1)
+        obs = torch.cat((joint_pos, joint_vel, obj_pose, hand_pose_w), dim=-1)
         return {"policy": obs}
 
     def _get_rewards(self) -> torch.Tensor:
         # Distance of the hand to the bowl
         obj_pos = self.block.data.root_pos_w # refers to the root position in the world frame
         obj_z = obj_pos[:, 2] # 1.0166 when it is on the table
+        obj_quat = self.block.data.root_quat_w
+        x = obj_quat[:, 1]
+        y = obj_quat[:, 2]
+        z = obj_quat[:, 3]
+        w = obj_quat[:, 0]
+        t2 = 2.0 * (w * y - z * x)
+        # Clamp t2 to handle potential floating-point inaccuracies
+        t2 = torch.clamp(t2, min=-1.0, max=1.0)
+        pitch = torch.abs(torch.arcsin(t2))
+        
+        rew_object_orientation = self.cfg.reward_object_orientation * (pitch >= 0.5).to(dtype=torch.float32)
 
         # Hand joints
         # left: name="left_hand_roll_link", index=29
@@ -294,7 +321,7 @@ class Gr1TrainEnv(DirectRLEnv):
         palm_vector_a = left_ring_pos - left_wrist_pos
         palm_vector_b = left_middle_pos - left_wrist_pos
         palm_normal = torch.nn.functional.normalize(torch.cross(palm_vector_a, palm_vector_b), dim=-1)
-        palm_pos = (left_middle_pos + left_wrist_pos) / 2
+        palm_pos = (left_middle_pos * 0.7 + left_wrist_pos * 0.3)
 
         obj_hand = obj_pos - palm_pos
         obj_hand = torch.nn.functional.normalize(obj_hand, dim=1)
@@ -308,10 +335,12 @@ class Gr1TrainEnv(DirectRLEnv):
         # Palm facing block
         rew_success = self.cfg.reward_scale_success * (left_dist <= 0.15).to(dtype=torch.float32) * (dot > 0.5).to(dtype=torch.float32)
 
+        rew_pinky = self.cfg.reward_scale_contact_left_pinky * (torch.linalg.norm(self.force_hand.data.net_forces_w, dim=-1).squeeze(-1) + torch.linalg.norm(self.force_finger.data.net_forces_w, dim=-1).squeeze(-1))
+
         rew_falling_penalty = self.cfg.reward_scale_falling_penalty * (obj_z < 0.8).to(dtype=torch.float32)
         rew_time = self.cfg.reward_scale_time * self.episode_length_buf
 
-        total_reward = rew_left_dist + rew_success + rew_time + rew_falling_penalty + rew_palm_facing
+        total_reward = rew_left_dist + rew_success + rew_time + rew_falling_penalty + rew_palm_facing + rew_object_orientation
 
         self.rewards["total_reward"].append(torch.mean(total_reward).item())
         self.rewards["rew_left_dist"].append(torch.mean(rew_left_dist).item())
@@ -319,6 +348,8 @@ class Gr1TrainEnv(DirectRLEnv):
         self.rewards["rew_falling_penalty"].append(torch.mean(rew_falling_penalty).item())
         self.rewards["rew_time"].append(torch.mean(rew_time).item())
         self.rewards["rew_palm_facing"].append(torch.mean(rew_palm_facing).item())
+        self.rewards["rew_pinky"].append(torch.mean(rew_pinky).item())
+        self.rewards["rew_object_orientation"].append(torch.mean(rew_object_orientation).item())
         return total_reward
 
     def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
@@ -339,7 +370,7 @@ class Gr1TrainEnv(DirectRLEnv):
         left_wrist_pos = link_data[:, 29]
         left_middle_pos = link_data[:, 34]
         left_ring_pos = link_data[:, 36]
-        palm_pos = (left_middle_pos + left_wrist_pos) / 2
+        palm_pos = (left_middle_pos * 0.7 + left_wrist_pos * 0.3)
         # euclidean distance to object
         left_dist = torch.linalg.norm(palm_pos - obj_pos, dim=-1) # distance between hand and bowl
 

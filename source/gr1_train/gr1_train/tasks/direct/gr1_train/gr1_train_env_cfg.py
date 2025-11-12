@@ -15,10 +15,11 @@ import isaaclab.sim as sim_utils
 from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 from isaaclab_assets.robots.fourier import GR1T2_HIGH_PD_CFG
+from isaaclab.sensors import ContactSensorCfg
 
 @configclass
 class ObjectTableSceneCfg(InteractiveSceneCfg):
-    packing_table = AssetBaseCfg(
+    packing_table = AssetBaseCfg( # Height: 0.9941
         prim_path="/World/envs/env_.*/PackingTable",
         init_state=AssetBaseCfg.InitialStateCfg(pos=[0.0, 0.55, 0.0], rot=[1.0, 0.0, 0.0, 0.0]),
         spawn=UsdFileCfg(
@@ -87,6 +88,23 @@ class ObjectTableSceneCfg(InteractiveSceneCfg):
         ),
     )
 
+    
+
+    contact_forces_left_hand = ContactSensorCfg(
+        prim_path="/World/envs/env_.*/Robot/left_hand_pitch_link",
+        update_period=0.0,
+        history_length=6,
+        debug_vis=True
+    )
+
+    contact_forces_left_finger = ContactSensorCfg(
+        prim_path="/World/envs/env_.*/Robot/L_pinky_intermediate_link",
+        update_period=0.0,
+        history_length=6,
+        debug_vis=True
+    )
+
+
     ground = AssetBaseCfg(
         prim_path="/World/GroundPlane",
         spawn=GroundPlaneCfg(),
@@ -107,10 +125,10 @@ class Gr1TrainEnvCfg(DirectRLEnvCfg):
 
     action_space: int = 7
     # observation: joint positions (7), joint velocities (7) (left and right)
-    # object position (3)
+    # object position (3) orientation (4)
     # Left hand roll link pose (7)
     # waist joints: pos (3) vel (3)
-    observation_space: int = 14 + 3 + 7
+    observation_space: int = 14 + 7 + 7
     state_space: int = 0
 
     max_action = 0.5
@@ -125,6 +143,8 @@ class Gr1TrainEnvCfg(DirectRLEnvCfg):
     # reward_scale_left_vel: float = -0.01
     # reward_scale_obj_vel: float = -0.7
     reward_scale_falling_penalty: float = -1000.0
+    reward_scale_contact_left_pinky: float = -1.0
+    reward_object_orientation: float = -10.0
 
     reward_scale_time: float = -0.3
     # reward_scale_velocity: float = 0.5
