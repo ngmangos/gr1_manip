@@ -228,7 +228,7 @@ class Gr1TrainEnv(DirectRLEnv):
         self.robot = Articulation(cfg=self.cfg.scene.robot)
         self.block = RigidObject(cfg=self.cfg.scene.block)
         self.force_hand = ContactSensor(self.cfg.scene.contact_forces_left_hand)
-        self.force_finger = ContactSensor(self.cfg.scene.contact_forces_left_hand)
+        self.force_finger = ContactSensor(self.cfg.scene.contact_forces_left_finger)
 
         
         # spawn ground
@@ -335,12 +335,12 @@ class Gr1TrainEnv(DirectRLEnv):
         # Palm facing block
         rew_success = self.cfg.reward_scale_success * (left_dist <= 0.15).to(dtype=torch.float32) * (dot > 0.5).to(dtype=torch.float32)
 
-        rew_pinky = self.cfg.reward_scale_contact_left_pinky * (torch.linalg.norm(self.force_hand.data.net_forces_w, dim=-1).squeeze(-1) + torch.linalg.norm(self.force_finger.data.net_forces_w, dim=-1).squeeze(-1))
+        rew_pinky = self.cfg.reward_scale_contact_left_pinky * (torch.linalg.norm(self.force_finger.data.net_forces_w, dim=-1).squeeze(-1) + torch.linalg.norm(self.force_hand.data.net_forces_w, dim=-1).squeeze(-1))
 
         rew_falling_penalty = self.cfg.reward_scale_falling_penalty * (obj_z < 0.8).to(dtype=torch.float32)
         rew_time = self.cfg.reward_scale_time * self.episode_length_buf
 
-        total_reward = rew_left_dist + rew_success + rew_time + rew_falling_penalty + rew_palm_facing + rew_object_orientation
+        total_reward = rew_left_dist + rew_success + rew_time + rew_falling_penalty + rew_palm_facing + rew_object_orientation + rew_pinky
 
         self.rewards["total_reward"].append(torch.mean(total_reward).item())
         self.rewards["rew_left_dist"].append(torch.mean(rew_left_dist).item())
