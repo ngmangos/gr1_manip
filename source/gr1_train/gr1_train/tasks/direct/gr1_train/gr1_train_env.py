@@ -335,7 +335,7 @@ class Gr1TrainEnv(DirectRLEnv):
         # Palm facing block
         rew_success = self.cfg.reward_scale_success * (left_dist <= 0.15).to(dtype=torch.float32) * (dot > 0.5).to(dtype=torch.float32)
 
-        rew_pinky = self.cfg.reward_scale_contact_left_pinky * (torch.linalg.norm(self.force_finger.data.net_forces_w, dim=-1).squeeze(-1) + torch.linalg.norm(self.force_hand.data.net_forces_w, dim=-1).squeeze(-1))
+        rew_pinky = self.cfg.reward_scale_contact_left_pinky * torch.tanh((torch.linalg.norm(self.force_finger.data.net_forces_w, dim=-1).squeeze(-1) + torch.linalg.norm(self.force_hand.data.net_forces_w, dim=-1).squeeze(-1)) / 12)
 
         rew_falling_penalty = self.cfg.reward_scale_falling_penalty * (obj_z < 0.8).to(dtype=torch.float32)
         rew_time = self.cfg.reward_scale_time * self.episode_length_buf

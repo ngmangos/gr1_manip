@@ -143,7 +143,7 @@ class Gr1TrainEnvCfg(DirectRLEnvCfg):
     # reward_scale_left_vel: float = -0.01
     # reward_scale_obj_vel: float = -0.7
     reward_scale_falling_penalty: float = -1000.0
-    reward_scale_contact_left_pinky: float = -0.1
+    reward_scale_contact_left_pinky: float = -2.0
     reward_object_orientation: float = -10.0
 
     reward_scale_time: float = -0.3
