@@ -123,12 +123,13 @@ class Gr1TrainEnvCfg(DirectRLEnvCfg):
     sim: SimulationCfg = SimulationCfg(dt=1.0 / 120.0, render_interval=2)
     scene: ObjectTableSceneCfg = ObjectTableSceneCfg(num_envs=64, env_spacing=2.5, replicate_physics=True)
 
-    action_space: int = 7
+    action_space: int = 7 + 12
     # observation: joint positions (7), joint velocities (7) (left and right)
     # object position (3) orientation (4)
     # Left hand roll link pose (7)
     # waist joints: pos (3) vel (3)
-    observation_space: int = 14 + 7 + 7
+    # finger joints (12) finger velocities (12)
+    observation_space: int = 14 + 7 + 7 + 24
     state_space: int = 0
 
     max_action = 0.5
@@ -136,7 +137,7 @@ class Gr1TrainEnvCfg(DirectRLEnvCfg):
     # reward_scale_lift: float = 1.0
     # reward_scale_distance_right: float = -10.0
     reward_scale_distance_left: float = -4.0
-    reward_scale_success: float = 150.0
+    reward_scale_success: float = 40.0 # 150.0
     reward_palm_facing_object: float = 10.0
 
     # reward_scale_stopping_bonus: float = 150.0

@@ -38,7 +38,8 @@ class Gr1TrainEnv(DirectRLEnv):
             "rew_time": [],
             "rew_pinky": [],
             "rew_palm_facing": [],
-            "rew_object_orientation": []
+            "rew_object_orientation": [],
+            "rew_finger_dist": []
         }
 
         self.dones = {
@@ -66,6 +67,21 @@ class Gr1TrainEnv(DirectRLEnv):
             # "waist_yaw_joint",
             # "waist_pitch_joint",
             # "waist_roll_joint",
+    
+            # fingers=12
+            'L_index_proximal_joint',
+            'L_middle_proximal_joint',
+            'L_pinky_proximal_joint',
+            'L_ring_proximal_joint',
+            'L_thumb_proximal_yaw_joint',
+            'L_index_intermediate_joint',
+            'L_middle_intermediate_joint',
+            'L_pinky_intermediate_joint',
+            'L_ring_intermediate_joint',
+            'L_thumb_proximal_pitch_joint',
+            'L_thumb_distal_joint',
+            'R_thumb_distal_joint'
+
         ]
 
         # If number of joints lower than action space, pad with last joint
@@ -264,9 +280,14 @@ class Gr1TrainEnv(DirectRLEnv):
         # print(f"Normalised distance: max={torch.max(normalised_distance).item()} min={torch.min(normalised_distance).item()}")
         # When it gets closer, max action value decreases
         # "left_shoulder_pitch_joint", "left_shoulder_roll_joint", "left_shoulder_yaw_joint", "left_elbow_pitch_joint" but wrist not slowed
-        scaled_actions = normalised_actions * (normalised_distance.unsqueeze(1))
+        scaled_actions = normalised_actions[:, :7] * (normalised_distance.unsqueeze(1))
 
-        noise_actions = scaled_actions + torch.randn_like(self.actions) * 0.05
+        palm_pos = (link_data[:, 34] * 0.7 + link_data[:, 29] * 0.3)
+        left_dist = torch.linalg.norm(obj_pos - palm_pos, dim=-1)
+        hand_actions = (left_dist <= 0.15).to(dtype=torch.float32).unsqueeze(1) * normalised_actions[:, 7:] * 0.5
+
+        all_actions = torch.cat((scaled_actions, hand_actions), dim=-1)
+        noise_actions = all_actions + torch.randn_like(all_actions) * 0.05
         # For exploration and to simulate motor errors 
         # noise_actions = torch.cat((scaled_actions, normalised_actions[:, 4:]), dim=-1) + torch.randn_like(self.actions) * 0.05 
         self.robot.set_joint_position_target(noise_actions, joint_ids=self._controlled_joint_ids.tolist())
@@ -312,6 +333,7 @@ class Gr1TrainEnv(DirectRLEnv):
         # Left middle finger: name="L_middle_intermediate_link", index=44
         # L Proximal Middle link: name="L_middle_proximal_link", index=34
         # left_wrist_yaw_joint#26 left_wrist_pitch_joint#30 left_wrist_roll_joint#28
+        # L_thumb_distal_link=53
         link_data = self.robot.data.body_link_pos_w
         
         left_wrist_pos = link_data[:, 29]
@@ -335,12 +357,14 @@ class Gr1TrainEnv(DirectRLEnv):
         # Palm facing block
         rew_success = self.cfg.reward_scale_success * (left_dist <= 0.15).to(dtype=torch.float32) * (dot > 0.5).to(dtype=torch.float32)
 
-        rew_pinky = self.cfg.reward_scale_contact_left_pinky * torch.tanh((torch.linalg.norm(self.force_finger.data.net_forces_w, dim=-1).squeeze(-1) + torch.linalg.norm(self.force_hand.data.net_forces_w, dim=-1).squeeze(-1)) / 12)
+        rew_pinky = self.cfg.reward_scale_contact_left_pinky * torch.tanh((torch.linalg.norm(self.force_finger.data.net_forces_w, dim=-1).squeeze(-1) + torch.linalg.norm(self.force_hand.data.net_forces_w, dim=-1).squeeze(-1)) / 12) * (left_dist > 0.15).to(dtype=torch.float32)
 
         rew_falling_penalty = self.cfg.reward_scale_falling_penalty * (obj_z < 0.8).to(dtype=torch.float32)
         rew_time = self.cfg.reward_scale_time * self.episode_length_buf
 
-        total_reward = rew_left_dist + rew_success + rew_time + rew_falling_penalty + rew_palm_facing + rew_object_orientation + rew_pinky
+        rew_finger_dist = torch.linalg.norm(link_data[:, 44] - link_data[:, 53], dim=-1) * -10.0 * (left_dist <= 0.15).to(dtype=torch.float32)
+
+        total_reward = rew_left_dist + rew_success + rew_time + rew_falling_penalty + rew_palm_facing + rew_object_orientation + rew_pinky + rew_finger_dist
 
         self.rewards["total_reward"].append(torch.mean(total_reward).item())
         self.rewards["rew_left_dist"].append(torch.mean(rew_left_dist).item())
@@ -350,6 +374,7 @@ class Gr1TrainEnv(DirectRLEnv):
         self.rewards["rew_palm_facing"].append(torch.mean(rew_palm_facing).item())
         self.rewards["rew_pinky"].append(torch.mean(rew_pinky).item())
         self.rewards["rew_object_orientation"].append(torch.mean(rew_object_orientation).item())
+        self.rewards["rew_finger_dist"].append(torch.mean(rew_finger_dist).item())
         return total_reward
 
     def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
@@ -388,9 +413,9 @@ class Gr1TrainEnv(DirectRLEnv):
 
         # self.dones["total"].append(self.dones["dropped"][-1] + self.dones["timed_out"][-1] + self.dones["successful"][-1])
         # self.dones["total_x_time"].append(self.dones["dropped_x_time"][-1] + self.dones["timed_out_x_time"][-1] + self.dones["successful_x_time"][-1])
-        fails = torch.logical_or(time_out, dropped).to(dtype=torch.float32)
+        # fails = torch.logical_or(time_out, dropped).to(dtype=torch.float32)
 
-        return success, fails
+        return time_out, dropped
 
     def _reset_idx(self, env_ids: Sequence[int] | None):
         if env_ids is None:
