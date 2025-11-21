@@ -16,6 +16,8 @@ from isaaclab_assets.robots.fourier import GR1T2_HIGH_PD_CFG  # isort: skip
 
 from .gr1_train_env_cfg import Gr1TrainEnvCfg
 from isaaclab.sensors import ContactSensor
+import omni
+from pxr import Usd, UsdGeom, Gf
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -87,27 +89,46 @@ class Gr1TrainEnv(DirectRLEnv):
         # cache convenient handles
         self.joint_pos = self.robot.data.joint_pos
         self.joint_vel = self.robot.data.joint_vel
-    
+
     def close(self):
-        total_reward = np.array(self.rewards["total_reward"])
-        # rew_lift = np.array(self.rewards["rew_lift"])
-        # rew_dist_right = np.array(self.rewards["rew_dist_right"])
-        rew_left_dist = np.array(self.rewards["rew_left_dist"])
-        rew_success = np.array(self.rewards["rew_success"])
-        rew_time = np.array(self.rewards["rew_time"])
-        # rew_left_vel = np.array(self.rewards["rew_left_vel"])
-        rew_falling_penalty = np.array(self.rewards["rew_falling_penalty"])
-        # rew_stopping_bonus = np.array(self.rewards["rew_stopping_bonus"])
-        # rew_obj_vel = np.array(self.rewards["rew_obj_velocity"])
-        rew_palm_facing = np.array(self.rewards["rew_palm_facing"])
-        rew_pinky = np.array(self.rewards["rew_pinky"])
-        rew_object_orientation = np.array(self.rewards["rew_object_orientation"])
+        episode_length = 32 # horizon length, number of steps in a iteration/epoch
 
+        total_reward = []
+        rew_left_dist = []
+        rew_success = []
+        rew_time = []
+        rew_falling_penalty = []
+        rew_palm_facing = []
+        rew_pinky = []
+        rew_object_orientation = []
 
-        x_coords = np.arange(len(self.rewards["total_reward"]))
+        reward_length = len(self.rewards["total_reward"])
 
-        # plt.plot(x_coords,rew_lift)
-        # plt.plot(x_coords,rew_dist_right)
+        for i in range(0, reward_length, episode_length):
+            i_end = min(i + episode_length, reward_length)
+            total_reward.append(sum(self.rewards["total_reward"][i:i_end]) / episode_length)
+            rew_left_dist.append(sum(self.rewards["rew_left_dist"][i:i_end]) / episode_length)
+            rew_success.append(sum(self.rewards["rew_success"][i:i_end]) / episode_length)
+            rew_time.append(sum(self.rewards["rew_time"][i:i_end]) / episode_length)
+            rew_falling_penalty.append(sum(self.rewards["rew_falling_penalty"][i:i_end]) / episode_length)
+            rew_palm_facing.append(sum(self.rewards["rew_palm_facing"][i:i_end]) / episode_length)
+            rew_pinky.append(sum(self.rewards["rew_pinky"][i:i_end]) / episode_length)
+            rew_object_orientation.append(sum(self.rewards["rew_object_orientation"][i:i_end]) / episode_length)
+
+        grouped_len = len(total_reward)
+
+        total_reward = np.array(total_reward)
+        rew_left_dist = np.array(rew_left_dist)
+        rew_success = np.array(rew_success)
+        rew_time = np.array(rew_time)
+        rew_falling_penalty = np.array(rew_falling_penalty)
+        rew_palm_facing = np.array(rew_palm_facing)
+        rew_pinky = np.array(rew_pinky)
+        rew_object_orientation = np.array(rew_object_orientation)
+
+        x_coords = np.arange(grouped_len)
+
+        plt.clf()
         plt.plot(x_coords,rew_falling_penalty, label="Fall Pen")
         plt.plot(x_coords,rew_left_dist, label="Left Distance")
         plt.plot(x_coords,rew_success, label="Left Bonus")
@@ -118,20 +139,20 @@ class Gr1TrainEnv(DirectRLEnv):
 
         plt.plot(x_coords,total_reward, label="Total")
 
-        plt.title("Steps vs Reward")
-        plt.xlabel("Step")
+        plt.title("Iterations vs Reward")
+        plt.xlabel("Iteration")
         plt.ylabel("Reward")
         plt.legend(loc="upper left")
         plt.savefig("rewards.png")
         plt.clf()
 
-        rewards = [(total_reward, "Total Reward"), (rew_left_dist, "Left Distance Reward"), (rew_success, "Success Reward"), (rew_time, "Time Reward"), (rew_falling_penalty, "Falling Penalty"), (rew_palm_facing, "Palm Facing"), (rew_pinky, "Pinky"), (rew_object_orientation, "Obj Ori")]
+        rewards = [(total_reward, "Total Reward"), (rew_left_dist, "Left Distance Reward"), (rew_success, "Success Reward"), (rew_time, "Time Reward"), (rew_falling_penalty, "Falling Penalty"), (rew_palm_facing, "Palm Facing Reward"), (rew_pinky, "Pinky Contact Penalty"), (rew_object_orientation, "Object Orientation Penalty")]
         for reward_tuple in rewards:
             reward_values, label = reward_tuple
             plt.plot(x_coords,reward_values)
-            plt.xlabel("Step")
+            plt.xlabel("Iteration")
             plt.ylabel(label)
-            plt.title("Steps vs " + label)
+            plt.title("Iterations vs " + label)
             plt.savefig(label.lower().replace(" ", "_") + ".png")
             plt.clf()
 
@@ -145,8 +166,8 @@ class Gr1TrainEnv(DirectRLEnv):
         timed_out_x_time_grouped = []
         successful_x_time_grouped = []
         dones_len = len(self.dones["dropped"])
-        for i in range(0, dones_len, 30):
-            i_end = min(i + 30, dones_len)
+        for i in range(0, dones_len, episode_length):
+            i_end = min(i + episode_length, dones_len)
             dropped_grouped.append(sum(self.dones["dropped"][i:i_end]))
             timed_out_grouped.append(sum(self.dones["timed_out"][i:i_end]))
             successful_grouped.append(sum(self.dones["successful"][i:i_end]))
@@ -179,7 +200,7 @@ class Gr1TrainEnv(DirectRLEnv):
 
         plt.clf()
         grouped_len = len(dropped_grouped)
-        x_coords = np.linspace(0, dones_len, grouped_len)
+        x_coords = np.arange(grouped_len)
 
 
         dropped = np.array(dropped_grouped)
@@ -194,8 +215,8 @@ class Gr1TrainEnv(DirectRLEnv):
         plt.plot(x_coords,dropped,label="Dropped")
         plt.plot(x_coords,timed_out,label="Timed Out")
         plt.plot(x_coords,successful,label="Successful")
-        plt.title("Dones vs Steps")
-        plt.xlabel("Step")
+        plt.title("Dones vs Iterations")
+        plt.xlabel("Iteration")
         plt.ylabel("Dones")
         plt.legend(loc="upper left")
         plt.savefig("dones.png")
@@ -214,8 +235,8 @@ class Gr1TrainEnv(DirectRLEnv):
         plt.plot(x_coords,dropped,label="Dropped")
         plt.plot(x_coords,timed_out,label="Timed Out")
         plt.plot(x_coords,successful,label="Successful")
-        plt.title("Dones x Time vs Steps")
-        plt.xlabel("Step")
+        plt.title("Dones x Time vs Iterations")
+        plt.xlabel("Iteration")
         plt.ylabel("Dones x Time")
         plt.legend(loc="upper left")
         plt.savefig("dones_x_time.png")
@@ -276,7 +297,7 @@ class Gr1TrainEnv(DirectRLEnv):
         joint_pos = self.joint_pos[:, self._controlled_joint_ids].view(self.num_envs, -1)
         joint_pos += torch.randn_like(joint_pos) * 0.05 
         joint_vel = self.joint_vel[:, self._controlled_joint_ids].view(self.num_envs, -1)
-        joint_vel += torch.randn_like(joint_vel) * 0.05
+        joint_vel += + torch.randn_like(joint_vel) * 0.05
 
         # Add the hand world frame pose to observation
         hand_pose_w = self.robot.data.body_link_pose_w[:, 29]
@@ -284,7 +305,8 @@ class Gr1TrainEnv(DirectRLEnv):
 
         # object world position and quaternion
         obj_pose = self.block.data.root_pose_w  # (num_envs, 3)
-        obj_pose += torch.randn_like(obj_pose) * 0.05
+        obj_pose[:, :3] += torch.randn_like(obj_pose[:, :3]) * 0.01
+        obj_pose[:, :2] -= self.scene.env_origins[:, :2]
 
         obs = torch.cat((joint_pos, joint_vel, obj_pose, hand_pose_w), dim=-1)
         return {"policy": obs}
@@ -353,6 +375,16 @@ class Gr1TrainEnv(DirectRLEnv):
         return total_reward
 
     def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
+        # stage = omni.usd.get_context().get_stage()
+        # prim = stage.GetPrimAtPath("/World/envs/env_10/Block")
+        # bbox_cache = UsdGeom.BBoxCache(Usd.TimeCode.Default(), includedPurposes=[UsdGeom.Tokens.default_])
+        # bbox_cache.Clear()
+
+        # prim_bbox = bbox_cache.ComputeWorldBound(prim)
+        # prim_range = prim_bbox.ComputeAlignedRange()
+        # prim_size = prim_range.GetSize()
+        # print(prim_size) # Table: (2.4736464901198483, 0.7816251214566936, 1.0829095794318566), Block: (0.0600000000000005, 0.05999999999999961, 0.1200000000000001)
+
         # object dropped too low or timeout
         obj_pos = self.block.data.root_pos_w
         dropped = (obj_pos[:, 2] < 0.8).to(dtype=torch.float32)  # block is below 0.5m

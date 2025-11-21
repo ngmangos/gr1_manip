@@ -55,35 +55,36 @@ class ObjectTableSceneCfg(InteractiveSceneCfg):
         init_state=ArticulationCfg.InitialStateCfg(
             pos=(-0.3, 0, 0.93),
             rot=(0.7071, 0, 0, 0.7071),
-            joint_pos={
-                # right-arm
-                "right_shoulder_pitch_joint": 0.0,
-                "right_shoulder_roll_joint": 0.0,
-                "right_shoulder_yaw_joint": 0.0,
-                "right_elbow_pitch_joint": 0.0,
-                "right_wrist_yaw_joint": 0.0,
-                "right_wrist_roll_joint": 0.0,
-                "right_wrist_pitch_joint": 0.0,
-                # left-arm
-                "left_shoulder_pitch_joint": 0.0, # -1.0,
-                "left_shoulder_roll_joint": 0.0,
-                "left_shoulder_yaw_joint": 0.0,
-                "left_elbow_pitch_joint": 0.0, # -1.5708,
-                "left_wrist_yaw_joint": 0.0,
-                "left_wrist_roll_joint": 0.0,
-                "left_wrist_pitch_joint": 0.0,
-                # "waist_yaw_joint": 0.0,
-                # "waist_pitch_joint": 0.0,
-                # "waist_roll_joint": 0.0,
-                # -- keep all others at zero
-                "head_.*": 0.0,
-                "waist_.*": 0.0,
-                ".*_hip_.*": 0.0,
-                ".*_knee_.*": 0.0,
-                ".*_ankle_.*": 0.0,
-                "R_.*": 0.0,
-                "L_.*": 0.0,
-            },
+            joint_pos={".*": 0.0},
+            # joint_pos={
+            #     # right-arm
+            #     "right_shoulder_pitch_joint": 0.0,
+            #     "right_shoulder_roll_joint": 0.0,
+            #     "right_shoulder_yaw_joint": 0.0,
+            #     "right_elbow_pitch_joint": 0.0,
+            #     "right_wrist_yaw_joint": 0.0,
+            #     "right_wrist_roll_joint": 0.0,
+            #     "right_wrist_pitch_joint": 0.0,
+            #     # left-arm
+            #     "left_shoulder_pitch_joint": 0.0, # -1.0,
+            #     "left_shoulder_roll_joint": 0.0,
+            #     "left_shoulder_yaw_joint": 0.0,
+            #     "left_elbow_pitch_joint": 0.0, # -1.5708,
+            #     "left_wrist_yaw_joint": 0.0,
+            #     "left_wrist_roll_joint": 0.0,
+            #     "left_wrist_pitch_joint": 0.0,
+            #     # "waist_yaw_joint": 0.0,
+            #     # "waist_pitch_joint": 0.0,
+            #     # "waist_roll_joint": 0.0,
+            #     # -- keep all others at zero
+            #     "head_.*": 0.0,
+            #     "waist_.*": 0.0,
+            #     ".*_hip_.*": 0.0,
+            #     ".*_knee_.*": 0.0,
+            #     ".*_ankle_.*": 0.0,
+            #     "R_.*": 0.0,
+            #     "L_.*": 0.0,
+            # },
             joint_vel={".*": 0.0},
         ),
     )
@@ -127,7 +128,6 @@ class Gr1TrainEnvCfg(DirectRLEnvCfg):
     # observation: joint positions (7), joint velocities (7) (left and right)
     # object position (3) orientation (4)
     # Left hand roll link pose (7)
-    # waist joints: pos (3) vel (3)
     observation_space: int = 14 + 7 + 7
     state_space: int = 0
 
@@ -143,10 +143,10 @@ class Gr1TrainEnvCfg(DirectRLEnvCfg):
     # reward_scale_left_vel: float = -0.01
     # reward_scale_obj_vel: float = -0.7
     reward_scale_falling_penalty: float = -1000.0
-    reward_scale_contact_left_pinky: float = -2.0
+    reward_scale_contact_left_pinky: float = -10.0
     reward_object_orientation: float = -10.0
 
-    reward_scale_time: float = -0.3
+    reward_scale_time: float = -0.4
     # reward_scale_velocity: float = 0.5
 
     def __post_init__(self):
