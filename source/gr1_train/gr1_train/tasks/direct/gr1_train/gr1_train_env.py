@@ -86,10 +86,6 @@ class Gr1TrainEnv(DirectRLEnv):
             joint_ids.append(idxs[0])
         self._controlled_joint_ids = torch.tensor(joint_ids, dtype=torch.long)
 
-        # cache convenient handles
-        self.joint_pos = self.robot.data.joint_pos
-        self.joint_vel = self.robot.data.joint_vel
-
     def close(self):
         episode_length = 32 # horizon length, number of steps in a iteration/epoch
 
@@ -275,6 +271,7 @@ class Gr1TrainEnv(DirectRLEnv):
         self.actions = actions.clone()
 
     def _apply_action(self) -> None:
+        # print(f"Joint pos:")
         normalised_actions = torch.tanh(self.actions / 2)
         # print(f"normalised_actions={normalised_actions}")
         # calculate distance
@@ -284,7 +281,7 @@ class Gr1TrainEnv(DirectRLEnv):
         # left_dist = torch.linalg.norm(left_hand_pos - obj_pos, dim=-1)
         # normalise distance to be between 0 and 1
         left_finger_dist = torch.linalg.norm(link_data[:, 44] - obj_pos, dim=-1)
-        normalised_distance = torch.tanh(left_finger_dist * 3)
+        normalised_distance = torch.tanh(left_finger_dist * 2.5)
         # print(f"Normalised distance: max={torch.max(normalised_distance).item()} min={torch.min(normalised_distance).item()}")
         # When it gets closer, max action value decreases
         # "left_shoulder_pitch_joint", "left_shoulder_roll_joint", "left_shoulder_yaw_joint", "left_elbow_pitch_joint" but wrist not slowed
@@ -300,9 +297,9 @@ class Gr1TrainEnv(DirectRLEnv):
 
     def _get_observations(self) -> dict:
         # gather joint pos/vel for controlled joints
-        joint_pos = self.joint_pos[:, self._controlled_joint_ids].view(self.num_envs, -1)
+        joint_pos = self.robot.data.joint_pos[:, self._controlled_joint_ids].view(self.num_envs, -1)
         # joint_pos += torch.randn_like(joint_pos) * 0.05 
-        joint_vel = self.joint_vel[:, self._controlled_joint_ids].view(self.num_envs, -1)
+        joint_vel = self.robot.data.joint_vel[:, self._controlled_joint_ids].view(self.num_envs, -1)
         # joint_vel += + torch.randn_like(joint_vel) * 0.05
 
         # Add the hand world frame pose to observation
@@ -459,10 +456,6 @@ class Gr1TrainEnv(DirectRLEnv):
         obj_init_pos[:, :2] += self.scene.env_origins[env_ids, :2]
         obj_init_pos[:, 0] += sample_uniform(-0.3, 0.3, (len(env_ids), 1), joint_pos.device).squeeze(-1)
         obj_init_pos[:, 1] += sample_uniform(-0.1, 0.1, (len(env_ids), 1), joint_pos.device).squeeze(-1)
-
-        # write robot joint states
-        self.joint_pos[env_ids] = joint_pos
-        self.joint_vel[env_ids] = joint_vel
 
         # reset object root pose & velocity in sim
         # root_quat: keep identity

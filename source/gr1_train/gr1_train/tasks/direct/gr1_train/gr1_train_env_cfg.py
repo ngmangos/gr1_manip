@@ -118,7 +118,7 @@ class Gr1TrainEnvCfg(DirectRLEnvCfg):
     episode_length_s: float = 5.0
 
     sim: SimulationCfg = SimulationCfg(dt=1.0 / 200.0, render_interval=2)
-    scene: ObjectTableSceneCfg = ObjectTableSceneCfg(num_envs=64, env_spacing=2.5, replicate_physics=True)
+    scene: ObjectTableSceneCfg = ObjectTableSceneCfg(num_envs=1, env_spacing=2.5, replicate_physics=True)
 
     action_space: int = 7
     # observation: joint positions (7), joint velocities (7) (left and right)
