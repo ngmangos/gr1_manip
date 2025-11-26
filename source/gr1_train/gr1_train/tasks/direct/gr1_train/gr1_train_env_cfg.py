@@ -16,9 +16,36 @@ from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 from isaaclab_assets.robots.fourier import GR1T2_HIGH_PD_CFG
 from isaaclab.sensors import ContactSensorCfg
+# from isaacsim.storage.native import get_assets_root_path
+
 
 @configclass
 class ObjectTableSceneCfg(InteractiveSceneCfg):
+    # assets_root_path = get_assets_root_path()
+
+    # robot = ArticulationCfg(
+    #     prim_path="/World/envs/env_.*/Robot",
+    #     spawn=UsdFileCfg(
+    #         usd_path=f"{assets_root_path}/Isaac/Robots/FourierIntelligence/GR-1/GR1T2_fourier_hand_6dof/GR1T2_fourier_hand_6dof.usd",
+    #     ),
+    #     init_state=ArticulationCfg.InitialStateCfg(
+    #         pos=(-0.3, 0, 0.93),
+    #         rot=(0.7071, 0, 0, 0.7071),
+    #         joint_pos={".*": 0.0},
+    #         joint_vel={".*": 0.0},
+    #     ),
+    #     actuators=GR1T2_HIGH_PD_CFG.actuators,
+    # )    
+    robot: ArticulationCfg = GR1T2_HIGH_PD_CFG.replace(
+        prim_path="/World/envs/env_.*/Robot",
+        init_state=ArticulationCfg.InitialStateCfg(
+            pos=(-0.3, 0, 0.93),
+            rot=(0.7071, 0, 0, 0.7071),
+            joint_pos={".*": 0.0},
+            joint_vel={".*": 0.0},
+        ),
+    )
+
     packing_table = AssetBaseCfg( # Height: 0.9941
         prim_path="/World/envs/env_.*/PackingTable",
         init_state=AssetBaseCfg.InitialStateCfg(pos=[0.0, 0.55, 0.0], rot=[1.0, 0.0, 0.0, 0.0]),
@@ -50,15 +77,8 @@ class ObjectTableSceneCfg(InteractiveSceneCfg):
         ),
     )
 
-    robot: ArticulationCfg = GR1T2_HIGH_PD_CFG.replace(
-        prim_path="/World/envs/env_.*/Robot",
-        init_state=ArticulationCfg.InitialStateCfg(
-            pos=(-0.3, 0, 0.93),
-            rot=(0.7071, 0, 0, 0.7071),
-            joint_pos={".*": 0.0},
-            joint_vel={".*": 0.0},
-        ),
-    )
+
+    
 
     ground = AssetBaseCfg(
         prim_path="/World/GroundPlane",
@@ -94,10 +114,10 @@ class ObjectTableSceneCfg(InteractiveSceneCfg):
 
 @configclass
 class Gr1TrainEnvCfg(DirectRLEnvCfg):
-    decimation: int = 6
+    decimation: int = 20
     episode_length_s: float = 5.0
 
-    sim: SimulationCfg = SimulationCfg(dt=1.0 / 120.0, render_interval=2)
+    sim: SimulationCfg = SimulationCfg(dt=1.0 / 200.0, render_interval=2)
     scene: ObjectTableSceneCfg = ObjectTableSceneCfg(num_envs=64, env_spacing=2.5, replicate_physics=True)
 
     action_space: int = 7

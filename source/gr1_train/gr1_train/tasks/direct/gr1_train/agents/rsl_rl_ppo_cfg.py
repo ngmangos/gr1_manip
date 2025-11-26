@@ -11,7 +11,7 @@ from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlPpoActorCriticCfg, R
 @configclass
 class PPORunnerCfg(RslRlOnPolicyRunnerCfg):
     num_steps_per_env = 32 # horizon, the number of (physics) steps before updating the policy
-    max_iterations = 1200 # Total number of PPO iterations to perform
+    max_iterations = 500 # Total number of PPO iterations to perform
     save_interval = 50 # saves model checkpoints every 50 iterations
     experiment_name = "gr1-manip"
     policy = RslRlPpoActorCriticCfg(

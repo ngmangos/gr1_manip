@@ -284,7 +284,7 @@ class Gr1TrainEnv(DirectRLEnv):
         # left_dist = torch.linalg.norm(left_hand_pos - obj_pos, dim=-1)
         # normalise distance to be between 0 and 1
         left_finger_dist = torch.linalg.norm(link_data[:, 44] - obj_pos, dim=-1)
-        normalised_distance = torch.tanh(left_finger_dist * 2)
+        normalised_distance = torch.tanh(left_finger_dist * 3)
         # print(f"Normalised distance: max={torch.max(normalised_distance).item()} min={torch.min(normalised_distance).item()}")
         # When it gets closer, max action value decreases
         # "left_shoulder_pitch_joint", "left_shoulder_roll_joint", "left_shoulder_yaw_joint", "left_elbow_pitch_joint" but wrist not slowed
