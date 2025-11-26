@@ -29,13 +29,13 @@ class ObjectTableSceneCfg(InteractiveSceneCfg):
     )
 
     # 6cm by 6cm cube
-    block = RigidObjectCfg(
-        prim_path="/World/envs/env_.*/Block",
-        # init_state=RigidObjectCfg.InitialStateCfg(pos=[-0.45, 0.45, 0.9996], rot=[1, 0, 0, 0]),
-        init_state=RigidObjectCfg.InitialStateCfg(pos=[-0.45, 0.45, 1.0], rot=[1, 0, 0, 0]),
+    cup = RigidObjectCfg(
+        prim_path="/World/envs/env_.*/Cup",
+        init_state=RigidObjectCfg.InitialStateCfg(pos=[-0.45, 0.45, 1.0434], rot=[0, 0, 0, 1]),
         spawn=UsdFileCfg(
-            usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Blocks/DexCube/dex_cube_instanceable.usd",
-            scale=(1.0, 1.0, 2.0),
+            # usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Blocks/DexCube/dex_cube_instanceable.usd",
+            usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Beaker/beaker_500ml.usd",
+            scale=(0.49358248203, 0.4471503525, 0.53609380382),
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
                 kinematic_enabled=False,
                 disable_gravity=False,
@@ -56,40 +56,19 @@ class ObjectTableSceneCfg(InteractiveSceneCfg):
             pos=(-0.3, 0, 0.93),
             rot=(0.7071, 0, 0, 0.7071),
             joint_pos={".*": 0.0},
-            # joint_pos={
-            #     # right-arm
-            #     "right_shoulder_pitch_joint": 0.0,
-            #     "right_shoulder_roll_joint": 0.0,
-            #     "right_shoulder_yaw_joint": 0.0,
-            #     "right_elbow_pitch_joint": 0.0,
-            #     "right_wrist_yaw_joint": 0.0,
-            #     "right_wrist_roll_joint": 0.0,
-            #     "right_wrist_pitch_joint": 0.0,
-            #     # left-arm
-            #     "left_shoulder_pitch_joint": 0.0, # -1.0,
-            #     "left_shoulder_roll_joint": 0.0,
-            #     "left_shoulder_yaw_joint": 0.0,
-            #     "left_elbow_pitch_joint": 0.0, # -1.5708,
-            #     "left_wrist_yaw_joint": 0.0,
-            #     "left_wrist_roll_joint": 0.0,
-            #     "left_wrist_pitch_joint": 0.0,
-            #     # "waist_yaw_joint": 0.0,
-            #     # "waist_pitch_joint": 0.0,
-            #     # "waist_roll_joint": 0.0,
-            #     # -- keep all others at zero
-            #     "head_.*": 0.0,
-            #     "waist_.*": 0.0,
-            #     ".*_hip_.*": 0.0,
-            #     ".*_knee_.*": 0.0,
-            #     ".*_ankle_.*": 0.0,
-            #     "R_.*": 0.0,
-            #     "L_.*": 0.0,
-            # },
             joint_vel={".*": 0.0},
         ),
     )
 
-    
+    ground = AssetBaseCfg(
+        prim_path="/World/GroundPlane",
+        spawn=GroundPlaneCfg(),
+    )
+
+    light = AssetBaseCfg(
+        prim_path="/World/light",
+        spawn=sim_utils.DomeLightCfg(color=(0.75, 0.75, 0.75), intensity=3000.0),
+    )
 
     contact_forces_left_hand = ContactSensorCfg(
         prim_path="/World/envs/env_.*/Robot/left_hand_pitch_link",
@@ -105,16 +84,13 @@ class ObjectTableSceneCfg(InteractiveSceneCfg):
         debug_vis=True
     )
 
-
-    ground = AssetBaseCfg(
-        prim_path="/World/GroundPlane",
-        spawn=GroundPlaneCfg(),
+    contact_forces_left_thumb = ContactSensorCfg(
+        prim_path="/World/envs/env_.*/Robot/L_thumb_distal_link",
+        update_period=0.0,
+        history_length=6,
+        debug_vis=True
     )
 
-    light = AssetBaseCfg(
-        prim_path="/World/light",
-        spawn=sim_utils.DomeLightCfg(color=(0.75, 0.75, 0.75), intensity=3000.0),
-    )
 
 @configclass
 class Gr1TrainEnvCfg(DirectRLEnvCfg):
@@ -143,7 +119,7 @@ class Gr1TrainEnvCfg(DirectRLEnvCfg):
     # reward_scale_left_vel: float = -0.01
     # reward_scale_obj_vel: float = -0.7
     reward_scale_falling_penalty: float = -1000.0
-    reward_scale_contact_left_pinky: float = -10.0
+    reward_scale_contact_left_hand: float = -0.5
     reward_object_orientation: float = -10.0
 
     reward_scale_time: float = -0.4
