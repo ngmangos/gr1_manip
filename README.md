@@ -1,5 +1,6 @@
 # Fourier Manipulation Reinforcement Learning
 This is a reinforcement learning project for the Fourier GR1. Using the PPO algorithm provided by RSL RL we are teaching the robot manipulation in the simulation Isaac Sim and the reinforcement learning library Isaac Lab.
+> Report on creating environment and training model is [here](fourier_rl_report.pdf)
 
 ## General information about the project
 The primary workspace for this project is located in the folder `gr1_manip/source/gr1_train/gr1_train/tasks/direct/gr1_train/`. 
