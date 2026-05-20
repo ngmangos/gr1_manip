@@ -1,135 +1,45 @@
-# Template for Isaac Lab Projects
+# Fourier Manipulation Reinforcement Learning
+This is a reinforcement learning project for the Fourier GR1. Using the PPO algorithm provided by RSL RL we are teaching the robot manipulation in the simulation Isaac Sim and the reinforcement learning library Isaac Lab.
 
-## Overview
+## General information about the project
+The primary workspace for this project is located in the folder `gr1_manip/source/gr1_train/gr1_train/tasks/direct/gr1_train/`. 
+- The file `gr1_train_env_cfg.py` is the config file for the environment. It contains important information such as the number of environments running in parallel, the frequency of the physics steps, the default joints of the robot.
+- The file `gr1_train_env.py` is the actual python class file for the environment. It contains the behaviours that are run during the training, such as calculating rewards, doing actions atc.
+- The file `agents/rsl_rl_ppo_cfg.py` is the config file for the algorithm and network themselves. It contains important hyperparameters for the algorithm such as the horizon and gamma value, I have written definitions in this file to explain each of the hyperparameters.
 
-This project/repository serves as a template for building projects or extensions based on Isaac Lab.
-It allows you to develop in an isolated environment, outside of the core Isaac Lab repository.
+## Running instructions
+Run all commands in the home repo `gr1_manip`
 
-**Key Features:**
-
-- `Isolation` Work outside the core Isaac Lab repository, ensuring that your development efforts remain self-contained.
-- `Flexibility` This template is set up to allow your code to be run as an extension in Omniverse.
-
-**Keywords:** extension, template, isaaclab
-
-## Installation
-
-- Install Isaac Lab by following the [installation guide](https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/index.html).
-  We recommend using the conda or uv installation as it simplifies calling Python scripts from the terminal.
-
-- Clone or copy this project/repository separately from the Isaac Lab installation (i.e. outside the `IsaacLab` directory):
-
-- Using a python interpreter that has Isaac Lab installed, install the library in editable mode using:
-
-    ```bash
-    # use 'PATH_TO_isaaclab.sh|bat -p' instead of 'python' if Isaac Lab is not installed in Python venv or conda
-    python -m pip install -e source/gr1_train
-
-- Verify that the extension is correctly installed by:
-
-    - Listing the available tasks:
-
-        Note: It the task name changes, it may be necessary to update the search pattern `"Template-"`
-        (in the `scripts/list_envs.py` file) so that it can be listed.
-
-        ```bash
-        # use 'FULL_PATH_TO_isaaclab.sh|bat -p' instead of 'python' if Isaac Lab is not installed in Python venv or conda
-        python scripts/list_envs.py
-        ```
-
-    - Running a task:
-
-        ```bash
-        # use 'FULL_PATH_TO_isaaclab.sh|bat -p' instead of 'python' if Isaac Lab is not installed in Python venv or conda
-        python scripts/<RL_LIBRARY>/train.py --task=<TASK_NAME>
-        ```
-
-    - Running a task with dummy agents:
-
-        These include dummy agents that output zero or random agents. They are useful to ensure that the environments are configured correctly.
-
-        - Zero-action agent
-
-            ```bash
-            # use 'FULL_PATH_TO_isaaclab.sh|bat -p' instead of 'python' if Isaac Lab is not installed in Python venv or conda
-            python scripts/zero_agent.py --task=<TASK_NAME>
-            ```
-        - Random-action agent
-
-            ```bash
-            # use 'FULL_PATH_TO_isaaclab.sh|bat -p' instead of 'python' if Isaac Lab is not installed in Python venv or conda
-            python scripts/random_agent.py --task=<TASK_NAME>
-            ```
-
-### Set up IDE (Optional)
-
-To setup the IDE, please follow these instructions:
-
-- Run VSCode Tasks, by pressing `Ctrl+Shift+P`, selecting `Tasks: Run Task` and running the `setup_python_env` in the drop down menu.
-  When running this task, you will be prompted to add the absolute path to your Isaac Sim installation.
-
-If everything executes correctly, it should create a file .python.env in the `.vscode` directory.
-The file contains the python paths to all the extensions provided by Isaac Sim and Omniverse.
-This helps in indexing all the python modules for intelligent suggestions while writing code.
-
-### Setup as Omniverse Extension (Optional)
-
-We provide an example UI extension that will load upon enabling your extension defined in `source/gr1_train/gr1_train/ui_extension_example.py`.
-
-To enable your extension, follow these steps:
-
-1. **Add the search path of this project/repository** to the extension manager:
-    - Navigate to the extension manager using `Window` -> `Extensions`.
-    - Click on the **Hamburger Icon**, then go to `Settings`.
-    - In the `Extension Search Paths`, enter the absolute path to the `source` directory of this project/repository.
-    - If not already present, in the `Extension Search Paths`, enter the path that leads to Isaac Lab's extension directory directory (`IsaacLab/source`)
-    - Click on the **Hamburger Icon**, then click `Refresh`.
-
-2. **Search and enable your extension**:
-    - Find your extension under the `Third Party` category.
-    - Toggle it to enable your extension.
-
-## Code formatting
-
-We have a pre-commit template to automatically format your code.
-To install pre-commit:
-
+### Setting up
 ```bash
-pip install pre-commit
+source setup_pip.sh
 ```
+This command installs the project as a python package, it then also replaces the policy runner file `/workspace/isaaclab/_isaac_sim/kit/python/lib/python3.11/site-packages/rsl_rl/runners/on_policy_runner.py` with `/workspace/fourier-sim/gr1_train/algos/on_policy_runner.py`. In our copy of the file I have added some code to store the mean rewards and create charts. If the runner doesn't work and it says the issue is in `on_policy_runner.py`, it is likely this file has been updated by Nvidia and you'll need to rewrite the graph making. I set up the array in `__init__`, then add to it in `log`, then making is in the `save` method.
 
-Then you can run pre-commit with:
-
+### Running the Reinforcement learning
 ```bash
-pre-commit run --all-files
+python3 scripts/rsl_rl/train.py --task=Gr1-Manip
 ```
+This command runs the training using the RSL RL library. We have registered the RL task in `gr1_manip/source/gr1_train/gr1_train/tasks/direct/gr1_train/__init__.py` under the name `Gr1-Manip`. You can use the command line argument `--headless`, this will run the reinforcement learning without the GUI, it is often faster. You can use the command line argument `--num_envs=10`, however this can also just be changed in `gr1_train_env_cfg.py`. The number of iterations is specified in `agents/rsl_rl_ppo_cfg.py`.
 
-## Troubleshooting
+This command will create the networks in `gr1_manip/logs`, it stores a copy of the network for every 50 iterations. However, these networks cannot be used in Isaac Sim directly, you must first run `play.py` (as specified below), this will create a folder `gr1_manip/logs/<date and id of network>/exported` which contains the `.pt` file you can use for the sim.
 
-### Pylance Missing Indexing of Extensions
-
-In some VsCode versions, the indexing of part of the extensions is missing.
-In this case, add the path to your extension in `.vscode/settings.json` under the key `"python.analysis.extraPaths"`.
-
-```json
-{
-    "python.analysis.extraPaths": [
-        "<path-to-ext-repo>/source/gr1_train"
-    ]
-}
+### Playing the Reinforcement learning
+```bash
+python3 scripts/rsl_rl/play.py --task=Gr1-Manip
 ```
+This command runs the reinforcement learning environment using the current most recent network, it will not train the network and doesn't even run the `_get_rewards` behaviour of `gr1_train_env.py` (it should run all other MDP functions). You can again use the command line argument `--num-envs` or `--headless`.
 
-### Pylance Crash
+This command is important when exporting a network to be used in Isaac Sim. The command will create a folder `gr1_manip/logs/<date and id of network>/exported` which contains the `.pt` file you can use for the sim.
 
-If you encounter a crash in `pylance`, it is probable that too many files are indexed and you run out of memory.
-A possible solution is to exclude some of omniverse packages that are not used in your project.
-To do so, modify `.vscode/settings.json` and comment out packages under the key `"python.analysis.extraPaths"`
-Some examples of packages that can likely be excluded are:
+## Docker instructions
+In the alienware computer under the fourier user, you can run a docker for this project (and other Isaac Lab projects) that has important libraries like torch and has git setup and has the `fourier-sim` folder mounted (The docker requires the folder `fourier-sim` to be in the same place, can be altered by changing the docker compose in `IsaacLab`).
 
-```json
-"<path-to-isaac-sim>/extscache/omni.anim.*"         // Animation packages
-"<path-to-isaac-sim>/extscache/omni.kit.*"          // Kit UI tools
-"<path-to-isaac-sim>/extscache/omni.graph.*"        // Graph UI tools
-"<path-to-isaac-sim>/extscache/omni.services.*"     // Services tools
-...
+In the folder `~/IsaacLab`, to start the docker container run:
+```bash
+python3 docker/container.py start
+```
+You can enter the container in VS code by clicking `ctrl+shift+p` and then clicking *Attach to running container*. You can also enter in terminal with:
+```bash
+python3 docker/container.py enter
 ```
